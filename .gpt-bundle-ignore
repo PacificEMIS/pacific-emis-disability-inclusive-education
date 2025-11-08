@@ -1,0 +1,43 @@
+
+# Common things we never want to upload
+# (These are on top of script defaults)
+venv/
+.env
+.env.*
+*.pem
+*.key
+*.pfx
+*.p12
+*.crt
+__pycache__/
+*.pyc
+*.pyo
+.mypy_cache/
+.pytest_cache/
+node_modules/
+dist/
+build/
+.coverage
+*.sqlite3
+*.db
+*.log
+*.zip
+*.7z
+*.tar
+*.tar.gz
+*.tgz
+*.bak
+*.tmp
+*.swp
+.DS_Store
+
+# Framework-specific (uncomment what applies)
+# Django:
+migrations/
+media/
+staticfiles/
+# Angular/React:
+*.map
+
+# Add anything project-specific below:
+# inclusive_ed/secret_seed_data/

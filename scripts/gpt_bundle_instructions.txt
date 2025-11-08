@@ -1,0 +1,5 @@
+Here is GPT bundle to bring back the context of our work, basically summarizing our work on an already running app.
+
+No need to summarize anything. Just load all of it into your own memory so I don't have to repeat everything everything you get slow and I have to start a new chat.
+
+Let's get on fast dev mode. Just tell me when you are ready for the next instructions.

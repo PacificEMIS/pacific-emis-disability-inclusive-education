@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 from django.db import transaction
-from integrations.models import EmisSchool, EmisClassLevel
+from integrations.models import EmisSchool, EmisClassLevel, EmisJobTitle, EmisWarehouseYear
 from integrations.emis_client import EmisClient
 
 class Command(BaseCommand):
@@ -12,7 +12,18 @@ class Command(BaseCommand):
 
         schools = payload.get("schoolCodes", [])
         levels = payload.get("levels", [])
-        added_sch = updated_sch = added_lvl = updated_lvl = 0
+        job_title = payload.get("teacherRoles", [])
+        warehouse_years = payload.get("warehouseYears", [])
+        (
+            added_sch,
+            updated_sch,
+            added_lvl,
+            updated_lvl,
+            added_title,
+            updated_title,
+            added_year,
+            updated_year,
+        ) = (0, 0, 0, 0, 0, 0, 0, 0)
 
         with transaction.atomic():
             # Schools
@@ -39,6 +50,44 @@ class Command(BaseCommand):
                 added_lvl += int(created)
                 updated_lvl += int(not created)
 
-        self.stdout.write(self.style.SUCCESS(
-            f"Schools +{added_sch}/{updated_sch}, Levels +{added_lvl}/{updated_lvl}"
-        ))
+            # Job Titles
+            for item in job_title:
+                code, label = item.get("C"), item.get("N")
+                if not code:
+                    continue
+                obj, created = EmisJobTitle.objects.update_or_create(
+                    code=str(code),
+                    defaults={"label": label or str(code), "active": True},
+                )
+                added_title += int(created)
+                updated_title += int(not created)
+
+            # Warehouse Years
+            for item in warehouse_years:
+                code, label = item.get("C"), item.get("FormattedYear")
+                if not code:
+                    continue
+                obj, created = EmisWarehouseYear.objects.update_or_create(
+                    code=str(code),
+                    defaults={"label": label or str(code), "active": True},
+                )
+                added_year += int(created)
+                updated_year += int(not created)
+
+        msg = (
+            "Schools +{}/{}, "
+            "Levels +{}/{}, "
+            "Job Titles +{}/{}, "
+            "Warehouse Years +{}/{}"
+        ).format(
+            added_sch, 
+            updated_sch, 
+            added_lvl, 
+            updated_lvl, 
+            added_title, 
+            updated_title, 
+            added_year, 
+            updated_year
+        )
+
+        self.stdout.write(self.style.SUCCESS(msg))

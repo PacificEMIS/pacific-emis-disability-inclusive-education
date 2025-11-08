@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import EmisSchool, EmisClassLevel
+from .models import EmisSchool, EmisClassLevel, EmisJobTitle, EmisWarehouseYear
 
 @admin.register(EmisSchool)
 class EmisSchoolAdmin(admin.ModelAdmin):
@@ -9,6 +9,18 @@ class EmisSchoolAdmin(admin.ModelAdmin):
 
 @admin.register(EmisClassLevel)
 class EmisClassLevelAdmin(admin.ModelAdmin):
+    list_display = ("code", "label", "active")
+    search_fields = ("code", "label")
+    list_filter = ("active",)
+
+@admin.register(EmisJobTitle)
+class EmisJobTitleAdmin(admin.ModelAdmin):
+    list_display = ("code", "label", "active")
+    search_fields = ("code", "label")
+    list_filter = ("active",)
+
+@admin.register(EmisWarehouseYear)
+class EmisWarehouseYearAdmin(admin.ModelAdmin):
     list_display = ("code", "label", "active")
     search_fields = ("code", "label")
     list_filter = ("active",)
