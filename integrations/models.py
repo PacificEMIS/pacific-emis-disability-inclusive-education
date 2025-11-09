@@ -22,3 +22,35 @@ class EmisClassLevel(models.Model):
 
     def __str__(self):
         return f"{self.code} — {self.label}"
+
+class EmisJobTitle(models.Model):
+    """
+    Lookup table for teacher roles / job titles.
+    Mirrors core.lookups.teacherRoles.
+    """
+    code = models.CharField(max_length=16, primary_key=True)   # from core.lookups.teacherRoles.C
+    label = models.CharField(max_length=128)                   # from core.lookups.teacherRoles.N
+    active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["code"]
+        verbose_name = "Job Title"
+        verbose_name_plural = "Job Titles"
+
+    def __str__(self):
+        return f"{self.code} — {self.label}"
+    
+class EmisWarehouseYear(models.Model):
+    """
+    Lookup table for warehouse years (with school year formatted)
+    """
+    code = models.CharField(max_length=16, primary_key=True)   # from core.lookups.warehouseYears.C
+    label = models.CharField(max_length=128)                   # from core.lookups.warehouseYears.FormattedYear
+    active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["code"]
+        verbose_name = "School Year"
+
+    def __str__(self):
+        return f"{self.label}"

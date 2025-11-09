@@ -1,0 +1,22 @@
+{
+  "name": "pacific-emis-disability-inclusive-education",
+  "maxFileMB": 10,
+  "includeGlobs": [
+    "README.md",
+    "**/*.py", "**/*.ipynb",
+    "**/*.html", "**/*.jinja", "templates/**", "static/**", "assets/**",
+    "**/*.js", "**/*.ts", "**/*.tsx", "**/*.css", "**/*.scss",
+    "**/*.yml", "**/*.yaml", "**/*.toml", "**/*.json",
+    "**/*.cs", "**/*.csproj", "**/*.sln",
+    "package.json", "package-lock.json", "pnpm-lock.yaml", "yarn.lock",
+    "requirements.txt", "pyproject.toml", "Pipfile", "Pipfile.lock",
+    "README*", "LICENSE", "Makefile", "Dockerfile", "docker-compose.*"
+  ],
+  "excludeGlobs": [
+    "venv/**", ".venv/**", "node_modules/**", "dist/**", "build/**",
+    "__pycache__/**", "**/*.pyc", "**/*.pyo", ".git/**", ".idea/**", ".vscode/**",
+    "migrations/**", "media/**", "staticfiles/**",
+    "**/*.zip", "**/*.7z", "**/*.tar", "**/*.tar.gz", "**/*.tgz",
+    "**/*.png", "**/*.jpg", "**/*.jpeg", "**/*.gif", "**/*.mp4", "**/*.mov"
+  ]
+}

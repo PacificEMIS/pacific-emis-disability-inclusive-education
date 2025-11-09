@@ -1,0 +1,30 @@
+/* Keep sidebar tidy and sign-out pinned at bottom */
+.sidebar .nav-link {
+  border-radius: .5rem;
+  margin: .125rem .5rem;
+  color: var(--bs-body-color);
+}
+.sidebar .nav-link.active {
+  color: #fff;
+  background-color: var(--bs-primary);
+}
+.sidebar .nav-link:hover {
+  background-color: rgba(0,0,0,.04);
+}
+
+/* Make offcanvas look like static sidebar on md+ */
+@media (min-width: 768px) {
+  .offcanvas-md {
+    position: sticky !important;
+    top: 56px; /* height of header */
+    height: calc(100vh - 56px);
+    transform: none !important;
+    visibility: visible !important;
+    border-right: 1px solid var(--bs-border-color);
+  }
+}
+
+/* Card polish */
+.card {
+  border-radius: .85rem;
+}

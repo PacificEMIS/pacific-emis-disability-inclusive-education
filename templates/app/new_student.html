@@ -1,0 +1,31 @@
+<h2>New Student</h2>
+
+{% if messages %}
+  <ul>
+    {% for m in messages %}
+      <li>{{ m }}</li>
+    {% endfor %}
+  </ul>
+{% endif %}
+
+<form method="post">
+  {% csrf_token %}
+  <label>First name: <input type="text" name="first_name"></label><br>
+  <label>Last name: <input type="text" name="last_name"></label><br>
+  <label>Date of birth: <input type="date" name="date_of_birth"></label><br>
+  <label>Class level:
+    <select name="class_level_code">
+      {% for lvl in class_levels %}
+        <option value="{{ lvl.code }}">{{ lvl.label }}</option>
+      {% endfor %}
+    </select>
+  </label><br>
+  <label>School:
+    <select name="emis_school_no">
+      {% for a in assignments %}
+        <option value="{{ a.emis_school_no }}">{{ a.emis_school_name }}</option>
+      {% endfor %}
+    </select>
+  </label><br>
+  <button type="submit">Save</button>
+</form>
