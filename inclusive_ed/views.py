@@ -73,12 +73,11 @@ def student_list(request):
 
     qs = Student.objects.all().order_by("last_name", "first_name")
 
+    # Name-only search (remove non-existent fields on Student)
     if q:
         qs = qs.filter(
-            Q(first_name__icontains=q)
-            | Q(last_name__icontains=q)
-            | Q(class_level_code__icontains=q)
-            | Q(emis_school_no__icontains=q)
+            Q(first_name__icontains=q) |
+            Q(last_name__icontains=q)
         )
 
     paginator = Paginator(qs, per_page)
@@ -94,11 +93,9 @@ def student_list(request):
             class_level_label = None
             class_level_code = None
             if hasattr(enrol, "class_level") and getattr(enrol, "class_level"):
-                # FK with label/code
                 cl = getattr(enrol, "class_level")
                 class_level_label = getattr(cl, "label", None)
                 class_level_code = getattr(cl, "code", None)
-            # fallback: code directly on enrolment
             if not class_level_code:
                 class_level_code = getattr(enrol, "class_level_code", None)
 
@@ -119,7 +116,7 @@ def student_list(request):
                 "class_level_label": class_level_label,
                 "school_name": school_name,
                 "school_no": school_no,
-                "school_year": school_year,
+                "school_year": getattr(school_year, "code", school_year),
             }
 
     context = {
@@ -132,6 +129,8 @@ def student_list(request):
         "page_links": _page_links(page_obj),
         "enrol_map": enrol_map,
     }
+
+    # Adjust template path if yours differs
     return render(request, "app/student_list.html", context)
 
 @login_required
