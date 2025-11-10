@@ -1,0 +1,12 @@
+{% extends "app/base.html" %}
+{% block content %}
+  <div class="container" style="max-width:720px;padding:2rem 1rem;">
+    <h1>Welcome to Pacific EMIS – Disability Inclusive Education</h1>
+    <p>Your account was created successfully via Google sign-in, but you don’t have any permissions yet.</p>
+    <p>Please contact an administrator to request access. Once the appropriate permissions or group membership are assigned, you’ll be able to use the app.</p>
+    {% if support_email %}
+      <p><strong>Need help?</strong> <a href="mailto:{{ support_email }}">{{ support_email }}</a></p>
+    {% endif %}
+    <p><a href="{% url 'account_logout' %}">Sign out</a></p>
+  </div>
+{% endblock %}

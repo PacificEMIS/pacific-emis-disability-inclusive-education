@@ -117,3 +117,14 @@ class StudentSchoolEnrolment(models.Model):
     def is_active(self):
         today = timezone.now().date()
         return self.end_date is None or self.end_date >= today
+
+class PermissionsAnchor(models.Model):
+    """
+    Dummy model that only exists to host app-level custom permissions.
+    """
+    class Meta:
+        managed = False
+        default_permissions = ()
+        permissions = (
+            ("access_inclusive_ed", "Can access the Disability-Inclusive Education app"),
+        )
