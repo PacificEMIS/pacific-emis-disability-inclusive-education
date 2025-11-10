@@ -138,6 +138,11 @@ def student_list(request):
 def dashboard(request):
     return render(request, "app/dashboard.html", {"active": "dashboard", "now": now()})
 
+# example Class-Based View using mixin
+#class DashboardView(InclusiveEdAccessRequired, TemplateView):
+#    template_name = "inclusive_ed/dashboard.html"
+
+
 @login_required
 def new_student(request):
     assignments = (EmisSchool.objects

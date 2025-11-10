@@ -30,7 +30,7 @@ ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split("
 
 # Application definition
 
-INSTALLED_APPS = [
+INSTALLED_APPS = [    
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -38,10 +38,21 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
+    # Required by allauth
+    "django.contrib.sites",
+
+    # allauth core
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+
+    # Google provider
+    "allauth.socialaccount.providers.google",
+
     # Project apps
     "accounts",
     "integrations",
-    "inclusive_ed",
+    "inclusive_ed",    
 ]
 
 MIDDLEWARE = [
@@ -50,6 +61,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'allauth.account.middleware.AccountMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -120,6 +132,7 @@ USE_I18N = True
 
 USE_TZ = True
 
+SITE_ID = 1
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
@@ -131,12 +144,46 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+###############################################################################
 # Authentication settings
-LOGIN_URL = "accounts:login"
-LOGIN_REDIRECT_URL = "inclusive_ed:dashboard"
-LOGOUT_REDIRECT_URL = "accounts:login"   # optional
+###############################################################################
 
-# EMIS integration settingss
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",
+    "allauth.account.auth_backends.AuthenticationBackend",
+]
+
+# Smoothest developer defaults — tweak for production
+ACCOUNT_EMAIL_VERIFICATION = "none" # or "mendatory", "optional"
+ACCOUNT_SIGNUP_FIELDS = ["email*", "username*", "password1*", "password2*"]
+ACCOUNT_LOGIN_METHODS = {'username', 'email'}
+SOCIALACCOUNT_LOGIN_ON_GET = True
+
+# Before, without allauth
+#LOGIN_URL = "accounts:login"
+#LOGIN_REDIRECT_URL = "inclusive_ed:dashboard"
+#LOGOUT_REDIRECT_URL = "accounts:login"
+# With allauth
+LOGIN_URL = "account_login"
+LOGIN_REDIRECT_URL = "accounts:post_login_router"
+LOGOUT_REDIRECT_URL = "account_login"
+
+SOCIALACCOUNT_PROVIDERS = {
+    "google": {
+        "SCOPE": ["openid", "email", "profile"],
+        "AUTH_PARAMS": {"prompt": "select_account"},  # show account chooser each time
+        # Optional: soft domain hint in the Google consent screen (NOT a hard gate)
+        # "HD": "moe.gov.ki",
+    }
+}
+
+# Optional: limit signups to specific email domains (uncomment + set)
+#ALLOWED_SIGNUP_DOMAINS = ["moe.gov.ki", "pacific-emis.org"]
+
+###############################################################################
+# EMIS integration settings
+###############################################################################
+
 EMIS = {
     "BASE_URL": os.getenv("EMIS_BASE_URL", "https://some-emis-url.pacific-emis.org"),
     "USERNAME": os.getenv("EMIS_USERNAME", ""),
@@ -147,3 +194,125 @@ EMIS = {
 }
 EMIS["LOGIN_URL"] = f'{EMIS["BASE_URL"]}/api/token'
 EMIS["LOOKUPS_URL"] = f'{EMIS["BASE_URL"]}/api/lookups/collection/core'
+
+###############################################################################
+# Logging settings
+###############################################################################
+
+# Optional but recommended to capture critical prod errors via email
+# Parse ADMINS from env
+raw_admins = os.getenv("DJANGO_ADMINS", "")
+ADMINS = [
+    tuple(a.strip() for a in pair.split(",", 1))
+    for pair in raw_admins.split(";")
+    if pair.strip()
+]
+
+# Fallback if none provided
+if not ADMINS:
+    ADMINS = [("Admin", "admin@example.org")]
+
+# -------- Logging (verbose in dev, quieter in prod) --------
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+
+    "filters": {
+        "require_debug_true": {"()": "django.utils.log.RequireDebugTrue"},
+        "require_debug_false": {"()": "django.utils.log.RequireDebugFalse"},
+    },
+
+    "formatters": {
+        "verbose": {
+            "format": "[%(asctime)s] %(levelname)s %(name)s:%(lineno)d — %(message)s",
+        },
+        "simple": {
+            "format": "%(levelname)s %(name)s — %(message)s",
+        },
+    },
+
+    "handlers": {
+        # Console (DEV)
+        "console_dev": {
+            "class": "logging.StreamHandler",
+            "filters": ["require_debug_true"],
+            "formatter": "verbose",
+        },
+        # Console (PROD)
+        "console_prod": {
+            "class": "logging.StreamHandler",
+            "filters": ["require_debug_false"],
+            "formatter": "simple",
+        },
+        # Email admins on 500s in PROD (requires ADMINS and proper email backend)
+        "mail_admins": {
+            "class": "django.utils.log.AdminEmailHandler",
+            "level": "ERROR",
+            "filters": ["require_debug_false"],
+        },
+        # Optional: rotating file (uncomment to persist logs)
+        # "file": {
+        #     "class": "logging.handlers.RotatingFileHandler",
+        #     "filename": str(Path(BASE_DIR, "django.log")),
+        #     "maxBytes": 5_000_000,  # 5 MB
+        #     "backupCount": 3,
+        #     "formatter": "verbose",
+        # },
+    },
+
+    # Default/root logger
+    "root": {
+        "handlers": ["console_dev", "console_prod"],  # add "file" if you enabled it
+        "level": "DEBUG" if DEBUG else "INFO",
+    },
+
+    "loggers": {
+        # Django core
+        "django": {
+            "handlers": ["console_dev", "console_prod"],
+            "level": "DEBUG" if DEBUG else "INFO",
+            "propagate": False,
+        },
+        # 500 errors, bad responses — email in PROD
+        "django.request": {
+            "handlers": ["console_dev", "console_prod", "mail_admins"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+        "django.security": {
+            "handlers": ["console_dev", "console_prod", "mail_admins"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+
+        # allauth (handy during OAuth debugging)
+        "allauth": {
+            "handlers": ["console_dev", "console_prod"],
+            "level": "DEBUG" if DEBUG else "INFO",
+            "propagate": False,
+        },
+        "allauth.account": {
+            "handlers": ["console_dev", "console_prod"],
+            "level": "DEBUG" if DEBUG else "INFO",
+            "propagate": False,
+        },
+        "allauth.socialaccount": {
+            "handlers": ["console_dev", "console_prod"],
+            "level": "DEBUG" if DEBUG else "INFO",
+            "propagate": False,
+        },
+
+        # Uncomment if you use gunicorn and want its errors to surface similarly
+        # "gunicorn.error": {
+        #     "handlers": ["console_prod"],
+        #     "level": "INFO",
+        #     "propagate": True,
+        # },
+        # "gunicorn.access": {
+        #     "handlers": ["console_prod"],
+        #     "level": "INFO",
+        #     "propagate": True,
+        # },
+    },
+}
+

@@ -6,9 +6,24 @@ from django.core.paginator import Paginator
 from django.db.models import Q, Prefetch
 from django.shortcuts import render, redirect
 from django.utils.timezone import now
-from django.urls import reverse
+from django.urls import reverse, NoReverseMatch
 
 from accounts.models import Staff, StaffSchoolMembership
+
+@login_required
+def post_login_router(request):
+    user = request.user
+    if user.is_superuser or user.has_perm("inclusive_ed.access_inclusive_ed"):
+        try:
+            return redirect("inclusive_ed:dashboard")
+        except NoReverseMatch:
+            return redirect("accounts:no_permissions")
+    return redirect("accounts:no_permissions")
+
+@login_required
+def no_permissions(request):
+    support_email = getattr(settings, "APP_SUPPORT_EMAIL", None)
+    return render(request, "accounts/no_permissions.html", {"support_email": support_email})
 
 def sign_in(request):
     if request.user.is_authenticated:
