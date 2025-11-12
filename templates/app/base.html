@@ -1,4 +1,5 @@
 {% load static %}
+{% load tz %}
 <!doctype html>
 <html lang="en" data-bs-theme="light">
   <head>
@@ -21,7 +22,7 @@
     />
 
     <!-- Custom -->
-    <link href="{% static 'admin/admin.css' %}" rel="stylesheet">
+    <link href="{% static 'app/admin.css' %}" rel="stylesheet">
     {% block extra_head %}{% endblock %}
   </head>
   <body>
@@ -87,7 +88,10 @@
           {% block content %}{% endblock %}
           <footer class="pt-5 small text-body-secondary">
             <hr>
-            <div>© {{ now|date:"Y" }} Pacific EMIS — Last updated: {{ now|date:"Y-m-d H:i" }}</div>
+             <div>
+              © {% now "Y" %} Pacific EMIS —
+              Last updated: {% now "Y-m-d H:i" as current_time %}{% localtime on %}{{ current_time }}{% endlocaltime %}
+            </div>
           </footer>
         </main>
       </div>
@@ -100,7 +104,7 @@
       crossorigin="anonymous"
     ></script>
 
-    <script src="{% static 'admin/admin.js' %}"></script>
+    <script src="{% static 'app/admin.js' %}"></script>
     {% block extra_js %}{% endblock %}
   </body>
 </html>
