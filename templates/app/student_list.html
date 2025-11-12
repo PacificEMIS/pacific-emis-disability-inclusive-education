@@ -3,22 +3,90 @@
 {% block title %}Students{% endblock %}
 {% block content %}
 
-<div class="d-flex align-items-center justify-content-between flex-wrap flex-md-nowrap mb-4">
-  <h1 class="h3 mb-0">Students</h1>
+<div class="card shadow-sm mb-3">
+  <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+    <div>
+      <h1 class="h4 mb-0">Students</h1>
+      <div class="small text-body-secondary">
+        {{ page_obj.paginator.count }} total
+      </div>
+    </div>
+    <div>
+      <a href="{% url 'inclusive_ed:new_student' %}" class="btn btn-sm btn-primary">New student</a>
+    </div>
+  </div>
 
-  <div class="d-flex align-items-center gap-2">
-    <form class="d-flex" method="get">
-      <input class="form-control form-control-sm me-2" type="search" name="q"
-             placeholder="Search name, class level, school" value="{{ q }}">
-      <select class="form-select form-select-sm me-2" name="per_page" onchange="this.form.submit()">
-        {% for n in page_size_options %}
-          <option value="{{ n }}" {% if per_page == n %}selected{% endif %}>{{ n }}/page</option>
-        {% endfor %}
-      </select>
-      <button class="btn btn-sm btn-outline-primary" type="submit">Search</button>
+  <!-- Filters -->
+  <div class="card-body pt-3">
+    <form id="filters" class="row g-2 align-items-end" method="get">
+      <input type="hidden" name="sort" value="{{ sort }}">
+      <input type="hidden" name="dir"  value="{{ dir }}">
+
+      <!-- Name -->
+      <div class="col-12 col-md-4">
+        <label for="q" class="form-label form-label-sm mb-1">Student name</label>
+        <input id="q" class="form-control form-control-sm" type="search" name="q"
+               placeholder="Search first or last name" value="{{ q|default_if_none:'' }}"
+               {% if q %}autofocus{% endif %}>
+      </div>
+
+      <!-- School -->
+      <div class="col-12 col-md-4">
+        <label for="school" class="form-label form-label-sm mb-1">School</label>
+        <select id="school" class="form-select form-select-sm" name="school">
+          <option value="">All schools</option>
+          {% for s in schools %}
+            <option value="{{ s.emis_school_no }}" {% if school == s.emis_school_no %}selected{% endif %}>
+              {{ s.emis_school_no }} — {{ s.emis_school_name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Year -->
+      <div class="col-6 col-md-2">
+        <label for="year" class="form-label form-label-sm mb-1">School Year</label>
+        <select id="year" class="form-select form-select-sm" name="year">
+          <option value="">All</option>
+          {% for y in years %}
+            <option value="{{ y.code }}" {% if year == y.code %}selected{% endif %}>
+              {{ y.label }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Level -->
+      <div class="col-6 col-md-2">
+        <label for="level" class="form-label form-label-sm mb-1">Class Level</label>
+        <select id="level" class="form-select form-select-sm" name="level">
+          <option value="">All</option>
+          {% for lv in levels %}
+            <option value="{{ lv.code }}" {% if level == lv.code %}selected{% endif %}>
+              {{ lv.code }} — {{ lv.label }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Per page + Reset -->
+      <div class="col-12 col-md-3 ms-auto d-flex justify-content-end gap-2">
+        <div class="flex-grow-1">
+          <label for="per_page" class="form-label form-label-sm mb-1">Page size</label>
+          <select id="per_page" class="form-select form-select-sm" name="per_page">
+            {% for n in page_size_options %}
+              <option value="{{ n }}" {% if per_page == n %}selected{% endif %}>{{ n }}/page</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="align-self-end">
+          <a class="btn btn-sm btn-outline-secondary" href="?per_page={{ per_page }}">Reset</a>
+          {# Fallback Apply button (kept for non-JS, comment out if you don't want it) #}
+          {# <button id="apply-btn" class="btn btn-sm btn-outline-primary">Apply</button> #}
+        </div>
+      </div>
+
     </form>
-
-    <a href="{% url 'inclusive_ed:new_student' %}" class="btn btn-sm btn-primary">New student</a>
   </div>
 </div>
 
@@ -27,23 +95,57 @@
     <table class="table table-hover align-middle mb-0">
       <thead class="table-light">
         <tr>
-          <th scope="col">Name</th>
-          <th scope="col">DOB</th>          
-          <th scope="col">School</th>
-          <th scope="col">School Year</th>
-          <th scope="col">Class Level</th>
+          <th scope="col">
+            <a class="text-decoration-none" href="?q={{ q }}&school={{ school }}&year={{ year }}&level={{ level }}&per_page={{ per_page }}&sort=name&dir={% if sort == 'name' and dir == 'asc' %}desc{% else %}asc{% endif %}">
+              Name
+              {% if sort == 'name' %}
+                <span class="text-muted">{% if dir == 'asc' %}▲{% else %}▼{% endif %}</span>
+              {% endif %}
+            </a>
+          </th>
+          <th scope="col">
+            <a class="text-decoration-none" href="?q={{ q }}&school={{ school }}&year={{ year }}&level={{ level }}&per_page={{ per_page }}&sort=dob&dir={% if sort == 'dob' and dir == 'asc' %}desc{% else %}asc{% endif %}">
+              DOB
+              {% if sort == 'dob' %}
+                <span class="text-muted">{% if dir == 'asc' %}▲{% else %}▼{% endif %}</span>
+              {% endif %}
+            </a>
+          </th>
+          <th scope="col">
+            <a class="text-decoration-none" href="?q={{ q }}&school={{ school }}&year={{ year }}&level={{ level }}&per_page={{ per_page }}&sort=school&dir={% if sort == 'school' and dir == 'asc' %}desc{% else %}asc{% endif %}">
+              School
+              {% if sort == 'school' %}
+                <span class="text-muted">{% if dir == 'asc' %}▲{% else %}▼{% endif %}</span>
+              {% endif %}
+            </a>
+          </th>
+          <th scope="col">
+            <a class="text-decoration-none" href="?q={{ q }}&school={{ school }}&year={{ year }}&level={{ level }}&per_page={{ per_page }}&sort=school_year&dir={% if sort == 'school_year' and dir == 'asc' %}desc{% else %}asc{% endif %}">
+              School Year
+              {% if sort == 'school_year' %}
+                <span class="text-muted">{% if dir == 'asc' %}▲{% else %}▼{% endif %}</span>
+              {% endif %}
+            </a>
+          </th>
+          <th scope="col">
+            <a class="text-decoration-none" href="?q={{ q }}&school={{ school }}&year={{ year }}&level={{ level }}&per_page={{ per_page }}&sort=class_level&dir={% if sort == 'class_level' and dir == 'asc' %}desc{% else %}asc{% endif %}">
+              Class Level
+              {% if sort == 'class_level' %}
+                <span class="text-muted">{% if dir == 'asc' %}▲{% else %}▼{% endif %}</span>
+              {% endif %}
+            </a>
+          </th>
           <th scope="col" class="text-end">Actions</th>
         </tr>
       </thead>
+
       <tbody>
         {% if page_obj.object_list %}
           {% for s in page_obj.object_list %}
             {% with e=enrol_map|get_item:s.id %}
             <tr>
               <td>
-                <div class="fw-semibold">
-                  {{ s.first_name }} {{ s.last_name }}
-                </div>
+                <div class="fw-semibold">{{ s.first_name }} {{ s.last_name }}</div>
               </td>
 
               <td class="text-body-secondary">
@@ -94,7 +196,7 @@
                   <span class="text-body-secondary">—</span>
                 {% endif %}
               </td>
-              
+
               <td class="text-end">
                 <a href="#" class="btn btn-sm btn-outline-primary">View</a>
               </td>
@@ -118,7 +220,7 @@
         <ul class="pagination pagination-sm mb-0">
           {% if page_obj.has_previous %}
             <li class="page-item">
-              <a class="page-link" href="?q={{ q }}&per_page={{ per_page }}&page={{ page_obj.previous_page_number }}">Prev</a>
+              <a class="page-link" href="?q={{ q }}&school={{ school }}&year={{ year }}&level={{ level }}&per_page={{ per_page }}&sort={{ sort }}&dir={{ dir }}&page={{ page_obj.previous_page_number }}">Prev</a>
             </li>
           {% else %}
             <li class="page-item disabled"><span class="page-link">Prev</span></li>
@@ -131,14 +233,14 @@
               <li class="page-item active"><span class="page-link">{{ p }}</span></li>
             {% else %}
               <li class="page-item">
-                <a class="page-link" href="?q={{ q }}&per_page={{ per_page }}&page={{ p }}">{{ p }}</a>
+                <a class="page-link" href="?q={{ q }}&school={{ school }}&year={{ year }}&level={{ level }}&per_page={{ per_page }}&sort={{ sort }}&dir={{ dir }}&page={{ p }}">{{ p }}</a>
               </li>
             {% endif %}
           {% endfor %}
 
           {% if page_obj.has_next %}
             <li class="page-item">
-              <a class="page-link" href="?q={{ q }}&per_page={{ per_page }}&page={{ page_obj.next_page_number }}">Next</a>
+              <a class="page-link" href="?q={{ q }}&school={{ school }}&year={{ year }}&level={{ level }}&per_page={{ per_page }}&sort={{ sort }}&dir={{ dir }}&page={{ page_obj.next_page_number }}">Next</a>
             </li>
           {% else %}
             <li class="page-item disabled"><span class="page-link">Next</span></li>

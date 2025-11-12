@@ -5,7 +5,6 @@ from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Q, Prefetch
 from django.shortcuts import render, redirect
-from django.utils.timezone import now
 from django.urls import reverse, NoReverseMatch
 
 from accounts.models import Staff, StaffSchoolMembership
@@ -108,6 +107,5 @@ def staff_list(request):
             "per_page": per_page,
             "page_size_options": [10, 25, 50, 100],
             "page_links": _page_window(page_obj),
-            "now": now(),
         },
     )

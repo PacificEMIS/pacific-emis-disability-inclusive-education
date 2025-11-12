@@ -2,19 +2,72 @@
 {% block title %}Staff{% endblock %}
 {% block content %}
 
-<div class="d-flex align-items-center justify-content-between flex-wrap flex-md-nowrap mb-4">
-  <h1 class="h3 mb-0">Staff</h1>
+<div class="card shadow-sm mb-3">
+  <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+    <div>
+      <h1 class="h4 mb-0">Staff</h1>
+      <div class="small text-body-secondary">
+        {{ page_obj.paginator.count }} total
+      </div>
+    </div>
+    {# If you add a "New staff" later, place the button here for consistency #}
+    {# <a href="{% url 'inclusive_ed:new_staff' %}" class="btn btn-sm btn-primary">New staff</a> #}
+  </div>
 
-  <form class="d-flex" method="get">
-    <input class="form-control form-control-sm me-2" type="search" name="q"
-           placeholder="Search name, username, email" value="{{ q }}">
-    <select class="form-select form-select-sm me-2" name="per_page" onchange="this.form.submit()">
-      {% for n in page_size_options %}
-        <option value="{{ n }}" {% if per_page == n %}selected{% endif %}>{{ n }}/page</option>
-      {% endfor %}
-    </select>
-    <button class="btn btn-sm btn-outline-primary" type="submit">Search</button>
-  </form>
+  <!-- Filters -->
+  <div class="card-body pt-3">
+    <form id="filters" class="row g-2 align-items-end" method="get">
+      <!-- page size + preserved state -->
+      <input type="hidden" name="sort" value="{{ sort|default:'' }}">
+      <input type="hidden" name="dir"  value="{{ dir|default:'' }}">
+
+      <!-- Name -->
+      <div class="col-12 col-md-4">
+        <label for="q" class="form-label form-label-sm mb-1">Name</label>
+        <input id="q" class="form-control form-control-sm" type="search" name="q"
+                placeholder="Search first or last name" value="{{ q|default_if_none:'' }}"
+                {% if q %}autofocus{% endif %}>
+      </div>
+
+      <!-- Email -->
+      <div class="col-12 col-md-4">
+        <label for="email" class="form-label form-label-sm mb-1">Email</label>
+        <input id="email" class="form-control form-control-sm" type="search" name="email"
+               placeholder="name@example.org" value="{{ email|default_if_none:'' }}"
+               {% if q %}autofocus{% endif %}>
+      </div>
+
+      <!-- School -->
+      <div class="col-12 col-md-4">
+        <label for="school" class="form-label form-label-sm mb-1">School</label>
+        <select id="school" class="form-select form-select-sm" name="school">
+          <option value="">All schools</option>
+          {% for s in schools %}
+            <option value="{{ s.emis_school_no }}" {% if school == s.emis_school_no %}selected{% endif %}>
+              {{ s.emis_school_no }} — {{ s.emis_school_name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Per page + Reset -->
+      <div class="col-12 col-md-3 ms-auto d-flex justify-content-end gap-2">
+        <div class="flex-grow-1">
+          <label for="per_page" class="form-label form-label-sm mb-1">Page size</label>
+          <select id="per_page" class="form-select form-select-sm" name="per_page">
+            {% for n in page_size_options %}
+              <option value="{{ n }}" {% if per_page == n %}selected{% endif %}>{{ n }}/page</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="align-self-end">
+          <a class="btn btn-sm btn-outline-secondary" href="?per_page={{ per_page }}">Reset</a>
+          {# Fallback Apply button (kept for non-JS, comment out if you don't want it) #}
+          {# <button id="apply-btn" class="btn btn-sm btn-outline-primary">Apply</button> #}
+        </div>
+      </div>
+    </form>
+  </div>
 </div>
 
 <div class="card shadow-sm">
@@ -86,7 +139,7 @@
         <ul class="pagination pagination-sm mb-0">
           {% if page_obj.has_previous %}
             <li class="page-item">
-              <a class="page-link" href="?q={{ q }}&per_page={{ per_page }}&page={{ page_obj.previous_page_number }}">Prev</a>
+              <a class="page-link" href="?q={{ q }}&email={{ email }}&school={{ school }}&per_page={{ per_page }}&page={{ page_obj.previous_page_number }}">Prev</a>
             </li>
           {% else %}
             <li class="page-item disabled"><span class="page-link">Prev</span></li>
@@ -99,14 +152,14 @@
               <li class="page-item active"><span class="page-link">{{ p }}</span></li>
             {% else %}
               <li class="page-item">
-                <a class="page-link" href="?q={{ q }}&per_page={{ per_page }}&page={{ p }}">{{ p }}</a>
+                <a class="page-link" href="?q={{ q }}&email={{ email }}&school={{ school }}&per_page={{ per_page }}&page={{ p }}">{{ p }}</a>
               </li>
             {% endif %}
           {% endfor %}
 
           {% if page_obj.has_next %}
             <li class="page-item">
-              <a class="page-link" href="?q={{ q }}&per_page={{ per_page }}&page={{ page_obj.next_page_number }}">Next</a>
+              <a class="page-link" href="?q={{ q }}&email={{ email }}&school={{ school }}&per_page={{ per_page }}&page={{ page_obj.next_page_number }}">Next</a>
             </li>
           {% else %}
             <li class="page-item disabled"><span class="page-link">Next</span></li>
