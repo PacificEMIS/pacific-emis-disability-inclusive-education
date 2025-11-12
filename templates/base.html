@@ -1,0 +1,127 @@
+{% load static %}
+{% load tz %}
+<!doctype html>
+<html lang="en" data-bs-theme="light">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Admin{% endblock %} — Pacific EMIS</title>
+
+    <!-- Bootstrap 5.3 -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+      crossorigin="anonymous"
+    />
+
+    <!-- Bootstrap Icons -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
+      rel="stylesheet"
+    />
+
+    <!-- Custom -->
+    <link href="{% static 'app/admin.css' %}" rel="stylesheet">
+    {% block extra_head %}{% endblock %}
+  </head>
+
+  <body>
+    
+      <!-- Header -->
+      <header class="navbar navbar-dark sticky-top bg-primary flex-md-nowrap p-0 shadow">
+        <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="{% url 'inclusive_ed:dashboard' %}">
+          Pacific EMIS &mdash; Disability Inclusive Education
+        </a>
+
+        {% if request.user.is_authenticated %}
+        <!-- Mobile sidebar toggle -->
+        <button class="navbar-toggler d-md-none collapsed me-2" type="button"
+                data-bs-toggle="offcanvas" data-bs-target="#sidebarNav" aria-controls="sidebarNav"
+                aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="w-100"></div>
+
+        <div class="navbar-nav flex-row">
+          <div class="nav-item text-nowrap">
+            <a class="nav-link px-3" href="{% url 'accounts:logout' %}">
+              <i class="bi bi-box-arrow-right me-1"></i> Sign Out
+            </a>
+          </div>
+        </div>
+        {% endif %}
+
+      </header>
+    
+
+    <div class="{% if request.user.is_authenticated %}container-fluid{% else %}container py-5{% endif %}">
+      <div class="row">
+
+        {% if request.user.is_authenticated %}
+          <!-- Sidebar -->
+          <div class="offcanvas-md offcanvas-start col-md-3 col-lg-2 p-0 bg-body-tertiary"
+               tabindex="-1" id="sidebarNav">
+            <div class="offcanvas-header d-md-none">
+              <h5 class="offcanvas-title">Menu</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="offcanvas"
+                      data-bs-target="#sidebarNav" aria-label="Close"></button>
+            </div>
+
+            <div class="offcanvas-body d-flex flex-column p-0">
+              <nav class="sidebar d-flex flex-column h-100">
+                <ul class="nav nav-pills flex-column mb-auto">
+                  <li class="nav-item">
+                    <a class="nav-link {% if active|default:'' == 'dashboard' %}active{% endif %}"
+                       href="{% url 'inclusive_ed:dashboard' %}">
+                      <i class="bi bi-speedometer2 me-2"></i> Dashboard
+                    </a>
+                  </li>
+                  <li>
+                    <a class="nav-link {% if active|default:'' == 'staff' %}active{% endif %}"
+                       href="{% url 'accounts:staff_list' %}">
+                      <i class="bi bi-people me-2"></i> Staff
+                    </a>
+                  </li>
+                  <li>
+                    <a class="nav-link {% if active|default:'' == 'students' %}active{% endif %}"
+                       href="{% url 'inclusive_ed:student_list' %}">
+                      <i class="bi bi-mortarboard me-2"></i> Students
+                    </a>
+                  </li>
+                </ul>
+              </nav>
+            </div>
+          </div>
+        {% endif %}
+
+        <!-- Main -->
+        <main class="{% if request.user.is_authenticated %}col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4{% else %}py-4{% endif %}">
+          {% block content %}{% endblock %}
+
+          {% if request.user.is_authenticated %}
+            <footer class="pt-5 small text-body-secondary">
+              <hr>
+              <div>
+                © {% now "Y" %} Pacific EMIS —
+                Last updated: {% now "Y-m-d H:i" as current_time %}
+                {% localtime on %}{{ current_time }}{% endlocaltime %}
+              </div>
+            </footer>
+          {% endif %}
+        </main>
+      </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+      crossorigin="anonymous"
+    ></script>
+
+    <script src="{% static 'app/admin.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+  </body>
+</html>
