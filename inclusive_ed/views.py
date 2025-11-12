@@ -181,15 +181,15 @@ def student_list(request):
         "sort": sort,
         "dir": dir_,
     }
-    return render(request, "app/student_list.html", context)
+    return render(request, "inclusive_ed/student_list.html", context)
 
 @login_required
 def dashboard(request):
-    return render(request, "app/dashboard.html", {"active": "dashboard"})
+    return render(request, "dashboard.html", {"active": "dashboard"})
 
 # example Class-Based View using mixin
 #class DashboardView(InclusiveEdAccessRequired, TemplateView):
-#    template_name = "inclusive_ed/dashboard.html"
+#    template_name = "dashboard.html"
 
 
 @login_required
@@ -236,5 +236,5 @@ def new_student(request):
         messages.success(request, "Student created.")
         return redirect("inclusive_ed:dashboard")
 
-    return render(request, "app/new_student.html",
+    return render(request, "inclusive_ed/new_student.html",
                   {"class_levels": class_levels, "assignments": assignments})

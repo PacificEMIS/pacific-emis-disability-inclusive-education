@@ -99,7 +99,7 @@ def staff_list(request):
 
     return render(
         request,
-        "app/staff_list.html",
+        "accounts/staff_list.html",
         {
             "active": "staff",
             "page_obj": page_obj,
