@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Delete membership — {{ staff.user.get_full_name|default:staff.user.username }}{% endblock %}
+
+{% block content %}
+
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+  <div>
+    <h1 class="h4 mb-0">
+      Delete school membership
+    </h1>
+    <div class="small text-body-secondary">
+      For:
+      {% if staff.user.first_name or staff.user.last_name %}
+        {{ staff.user.first_name }} {{ staff.user.last_name }}
+      {% else %}
+        {{ staff.user.username }}
+      {% endif %}
+    </div>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'accounts:staff_detail' staff.pk %}" class="btn btn-sm btn-outline-secondary">
+      &larr; Back to staff
+    </a>
+  </div>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    <p>
+      Are you sure you want to delete this membership?
+    </p>
+
+    <ul class="small text-body-secondary mb-3">
+      <li>School: {{ membership.school.emis_school_name }} ({{ membership.school.emis_school_no }})</li>
+      <li>Job title: {% if membership.job_title %}{{ membership.job_title.label }}{% else %}—{% endif %}</li>
+      <li>Login role: {% if membership.login_role %}{{ membership.login_role }}{% else %}—{% endif %}</li>
+      <li>
+        Validity:
+        {% if membership.start_date %}from {{ membership.start_date|date:"Y-m-d" }}{% else %}from —{% endif %}
+        {% if membership.end_date %} to {{ membership.end_date|date:"Y-m-d" }}{% else %} to open-ended{% endif %}
+      </li>
+    </ul>
+
+    <form method="post" class="d-flex justify-content-between">
+      {% csrf_token %}
+      <a href="{% url 'accounts:staff_detail' staff.pk %}"
+         class="btn btn-sm btn-outline-secondary">
+        Cancel
+      </a>
+      <button type="submit" class="btn btn-sm btn-danger">
+        Yes, delete this membership
+      </button>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
