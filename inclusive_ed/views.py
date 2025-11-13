@@ -1,20 +1,159 @@
+from datetime import timedelta
+
+from django.utils import timezone
+from django.utils.dateparse import parse_date
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q, OuterRef, Subquery, F
 from django.shortcuts import render, redirect, get_object_or_404
 from django.core.paginator import Paginator
-from django.db.models import Q
+from django.urls import reverse
 
+from accounts.models import Staff, StaffSchoolMembership
 from integrations.models import EmisClassLevel, EmisSchool, EmisWarehouseYear
 from inclusive_ed.models import Student, StudentSchoolEnrolment
-
-from django.contrib import messages
-from django.utils.dateparse import parse_date
 
 PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
 
 @login_required
 def dashboard(request):
-    return render(request, "dashboard.html", {"active": "dashboard"})
+    # Time window for "recent" counts (e.g. last 30 days)
+    now = timezone.now()
+    start_period = now - timedelta(days=30)
+
+    # --- Staff KPIs ---
+    total_staff = Staff.objects.count()
+    staff_added_recent = Staff.objects.filter(created_at__gte=start_period).count()
+
+    # Staff with no memberships (unassigned to any school)
+    staff_unassigned = Staff.objects.filter(memberships__isnull=True).distinct().count()
+
+    # Staff by InclusiveEd groups
+    staff_admin_count = (
+        Staff.objects.filter(user__groups__name="InclusiveEd - Admins").distinct().count()
+    )
+    staff_staff_count = (
+        Staff.objects.filter(user__groups__name="InclusiveEd - Staff").distinct().count()
+    )
+    staff_teacher_count = (
+        Staff.objects.filter(user__groups__name="InclusiveEd - Teachers").distinct().count()
+    )
+
+    # --- Student KPIs ---
+    total_students = Student.objects.count()
+    students_added_recent = Student.objects.filter(created_at__gte=start_period).count()
+
+    # --- Schools KPIs ---
+    active_schools = EmisSchool.objects.filter(active=True).count()
+
+    # Schools with at least one enrolment carrying disability-related data
+    disability_q = (
+        Q(seeing_flag=True)
+        | Q(hearing_flag=True)
+        | Q(mobility_flag=True)
+        | Q(fine_motor_flag=True)
+        | Q(speech_flag=True)
+        | Q(learning_flag=True)
+        | Q(memory_flag=True)
+        | Q(attention_flag=True)
+        | Q(behaviour_flag=True)
+        | Q(social_flag=True)
+        | Q(anxiety_freq__isnull=False)
+        | Q(depression_freq__isnull=False)
+    )
+
+    schools_with_disability_data = (
+        StudentSchoolEnrolment.objects.filter(disability_q)
+        .values("school_id")
+        .distinct()
+        .count()
+    )
+
+    # --- Recent activity (simple unified event log across core models) ---
+    events = []
+
+    def add_events_from_queryset(qs, entity_label, detail_url_name=None):
+        for obj in qs:
+            when = getattr(obj, "last_updated_at", None) or getattr(obj, "created_at", None)
+            created_at = getattr(obj, "created_at", None)
+            last_updated_at = getattr(obj, "last_updated_at", None)
+
+            if created_at and last_updated_at and last_updated_at > created_at:
+                action = "Updated"
+            elif created_at:
+                action = "Created"
+            else:
+                action = "Activity"
+
+            by_user = getattr(obj, "last_updated_by", None) or getattr(obj, "created_by", None)
+            by_username = getattr(by_user, "username", None) if by_user else None
+
+            url = None
+            if detail_url_name and when:
+                try:
+                    url = reverse(detail_url_name, args=[obj.pk])
+                except Exception:
+                    url = None
+
+            if when:
+                events.append(
+                    {
+                        "when": when,
+                        "entity": entity_label,
+                        "action": action,
+                        "by": by_username,
+                        "url": url,
+                    }
+                )
+
+    # Pull a few recent records from each core model
+    add_events_from_queryset(
+        Staff.objects.order_by("-last_updated_at")[:5],
+        "Staff",
+        detail_url_name="accounts:staff_detail",
+    )
+    add_events_from_queryset(
+        Student.objects.order_by("-last_updated_at")[:5],
+        "Student",
+        detail_url_name="inclusive_ed:student_detail",
+    )
+    add_events_from_queryset(
+        StaffSchoolMembership.objects.order_by("-last_updated_at")[:5],
+        "Staff membership",
+        detail_url_name=None,  # no detail view yet
+    )
+    add_events_from_queryset(
+        StudentSchoolEnrolment.objects.order_by("-last_updated_at")[:5],
+        "Student enrolment",
+        detail_url_name=None,  # could later deep-link to student detail + anchor
+    )
+
+    # Sort all events by time and keep the latest 10
+    events = sorted(events, key=lambda e: e["when"], reverse=True)[:10]
+
+    context = {
+        "active": "dashboard",
+
+        # Staff KPIs
+        "total_staff": total_staff,
+        "staff_added_recent": staff_added_recent,
+        "staff_unassigned": staff_unassigned,
+        "staff_admin_count": staff_admin_count,
+        "staff_staff_count": staff_staff_count,
+        "staff_teacher_count": staff_teacher_count,
+
+        # Student KPIs
+        "total_students": total_students,
+        "students_added_recent": students_added_recent,
+
+        # Schools KPIs
+        "active_schools": active_schools,
+        "schools_with_disability_data": schools_with_disability_data,
+
+        # Activity
+        "recent_events": events,
+    }
+    return render(request, "dashboard.html", context)
 
 # example Class-Based View using mixin
 #class DashboardView(InclusiveEdAccessRequired, TemplateView):
