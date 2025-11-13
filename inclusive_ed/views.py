@@ -1,6 +1,6 @@
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q, OuterRef, Subquery, F
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.core.paginator import Paginator
 from django.db.models import Q
 
@@ -11,6 +11,14 @@ from django.contrib import messages
 from django.utils.dateparse import parse_date
 
 PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
+
+@login_required
+def dashboard(request):
+    return render(request, "dashboard.html", {"active": "dashboard"})
+
+# example Class-Based View using mixin
+#class DashboardView(InclusiveEdAccessRequired, TemplateView):
+#    template_name = "dashboard.html"
 
 def _page_links(page_obj, *, radius=1, ends=1):
     current = page_obj.number
@@ -184,12 +192,34 @@ def student_list(request):
     return render(request, "inclusive_ed/student_list.html", context)
 
 @login_required
-def dashboard(request):
-    return render(request, "dashboard.html", {"active": "dashboard"})
+def student_detail(request, pk):
+    student = get_object_or_404(
+        Student.objects.prefetch_related(
+            "enrolments__school",
+            "enrolments__class_level",
+            "enrolments__school_year",
+            "enrolments__created_by",
+            "enrolments__last_updated_by",
+        ),
+        pk=pk,
+    )
 
-# example Class-Based View using mixin
-#class DashboardView(InclusiveEdAccessRequired, TemplateView):
-#    template_name = "dashboard.html"
+    # Order enrolments: newest year first, then created_at, then id
+    enrolments = (
+        student.enrolments
+        .select_related("school", "class_level", "school_year")
+        .order_by("-school_year__code", "-created_at", "-id")
+    )
+
+    latest_enrolment = enrolments.first() if enrolments else None
+
+    context = {
+        "active": "students",
+        "student": student,
+        "enrolments": enrolments,
+        "latest_enrolment": latest_enrolment,
+    }
+    return render(request, "inclusive_ed/student_detail.html", context)
 
 
 @login_required

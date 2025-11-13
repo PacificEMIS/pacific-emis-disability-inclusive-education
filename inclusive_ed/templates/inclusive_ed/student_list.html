@@ -198,7 +198,9 @@
               </td>
 
               <td class="text-end">
-                <a href="#" class="btn btn-sm btn-outline-primary">View</a>
+                <a href="{% url 'inclusive_ed:student_detail' s.id %}" class="btn btn-sm btn-outline-primary">
+                  View
+                </a>
               </td>
             </tr>
             {% endwith %}
