@@ -235,3 +235,79 @@ def staff_detail(request, pk):
         "can_add_membership": can_add_membership,
     }
     return render(request, "accounts/staff_detail.html", context)
+
+@login_required
+def staff_membership_edit(request, staff_id, pk):
+    """
+    Edit an existing StaffSchoolMembership for a given staff member.
+    """
+    staff = get_object_or_404(Staff, pk=staff_id)
+    membership = get_object_or_404(
+        StaffSchoolMembership,
+        pk=pk,
+        staff=staff,
+    )
+
+    can_edit = (
+        request.user.is_superuser
+        or request.user.has_perm("accounts.change_staffschoolmembership")
+    )
+    if not can_edit:
+        messages.error(request, "You do not have permission to edit school memberships.")
+        return redirect("accounts:staff_detail", pk=staff.pk)
+
+    if request.method == "POST":
+        form = StaffSchoolMembershipForm(request.POST, instance=membership)
+        if form.is_valid():
+            obj = form.save(commit=False)
+
+            # Audit: stamp last_updated_by if field exists
+            if hasattr(obj, "last_updated_by_id"):
+                obj.last_updated_by = request.user
+
+            obj.save()
+            messages.success(request, "School membership updated.")
+            return redirect("accounts:staff_detail", pk=staff.pk)
+    else:
+        form = StaffSchoolMembershipForm(instance=membership)
+
+    context = {
+        "active": "staff",
+        "staff": staff,
+        "membership": membership,
+        "form": form,
+    }
+    return render(request, "accounts/staff_membership_edit.html", context)
+
+
+@login_required
+def staff_membership_delete(request, staff_id, pk):
+    """
+    Confirm and delete a StaffSchoolMembership for a given staff member.
+    """
+    staff = get_object_or_404(Staff, pk=staff_id)
+    membership = get_object_or_404(
+        StaffSchoolMembership,
+        pk=pk,
+        staff=staff,
+    )
+
+    can_delete = (
+        request.user.is_superuser
+        or request.user.has_perm("accounts.delete_staffschoolmembership")
+    )
+    if not can_delete:
+        messages.error(request, "You do not have permission to delete school memberships.")
+        return redirect("accounts:staff_detail", pk=staff.pk)
+
+    if request.method == "POST":
+        membership.delete()
+        messages.success(request, "School membership deleted.")
+        return redirect("accounts:staff_detail", pk=staff.pk)
+
+    context = {
+        "active": "staff",
+        "staff": staff,
+        "membership": membership,
+    }
+    return render(request, "accounts/staff_membership_confirm_delete.html", context)

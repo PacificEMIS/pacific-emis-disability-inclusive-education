@@ -77,11 +77,11 @@
           <th scope="col">
             <a
               href="?sort=name&dir={% if sort == 'name' and dir == 'asc' %}desc{% else %}asc{% endif %}{% if q %}&q={{ q|urlencode }}{% endif %}{% if school %}&school={{ school|urlencode }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}"
-              class="link-body-emphasis text-decoration-none{% if sort == 'name' %} fw-semibold{% endif %}"
+              class="text-decoration-none"
             >
               Name
               {% if sort == 'name' %}
-                {% if dir == 'asc' %}&uarr;{% else %}&darr;{% endif %}
+                <span class="text-muted">{% if dir == 'asc' %}▲{% else %}▼{% endif %}</span>
               {% endif %}
             </a>
           </th>
@@ -90,11 +90,11 @@
           <th scope="col">
             <a
               href="?sort=email&dir={% if sort == 'email' and dir == 'asc' %}desc{% else %}asc{% endif %}{% if q %}&q={{ q|urlencode }}{% endif %}{% if school %}&school={{ school|urlencode }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}"
-              class="link-body-emphasis text-decoration-none{% if sort == 'email' %} fw-semibold{% endif %}"
+              class="text-decoration-none"
             >
               Email
               {% if sort == 'email' %}
-                {% if dir == 'asc' %}&uarr;{% else %}&darr;{% endif %}
+                <span class="text-muted">{% if dir == 'asc' %}▲{% else %}▼{% endif %}</span>
               {% endif %}
             </a>
           </th>
@@ -103,11 +103,11 @@
           <th scope="col">
             <a
               href="?sort=appointment&dir={% if sort == 'appointment' and dir == 'asc' %}desc{% else %}asc{% endif %}{% if q %}&q={{ q|urlencode }}{% endif %}{% if school %}&school={{ school|urlencode }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}"
-              class="link-body-emphasis text-decoration-none{% if sort == 'appointment' %} fw-semibold{% endif %}"
+              class="text-decoration-none"
             >
               Current Appointments
               {% if sort == 'appointment' %}
-                {% if dir == 'asc' %}&uarr;{% else %}&darr;{% endif %}
+                <span class="text-muted">{% if dir == 'asc' %}▲{% else %}▼{% endif %}</span>
               {% endif %}
             </a>
           </th>

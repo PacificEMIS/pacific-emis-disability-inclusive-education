@@ -105,8 +105,9 @@ class StaffSchoolMembership(models.Model):
 
     @property
     def is_active(self):
-        today = timezone.now().date()
-        return (
-            (self.start_date is None or self.start_date <= today)
-            and (self.end_date is None or self.end_date >= today)
-        )
+        """
+        Active if no end_date is set.
+        Any end_date (past, present, or future) means inactive.
+        """
+        return self.end_date is None
+

@@ -36,7 +36,7 @@
 <div class="row g-3">
 
   <!-- Profile / account summary -->
-  <div class="col-12 col-xl-4">
+  <div class="col-12 col-xxl-4">
     <div class="card shadow-sm h-100">
       <div class="card-header">
         <h2 class="h6 mb-0">Profile</h2>
@@ -117,7 +117,7 @@
   </div>
 
   <!-- School memberships -->
-  <div class="col-12 col-xl-8">
+  <div class="col-12 col-xxl-8">
     <div class="card shadow-sm h-100">
       <div class="card-header d-flex align-items-center justify-content-between">
         <h2 class="h6 mb-0">School memberships</h2>
@@ -134,9 +134,9 @@
             <form method="post" class="row g-2 align-items-end">
               {% csrf_token %}
 
-              <div class="col-12 col-md-4">
+              <div class="col-12 col-sm-6 col-lg-4 col-xl-3">
                 <label for="{{ membership_form.school.id_for_label }}"
-                       class="form-label form-label-sm mb-1">School</label>
+                      class="form-label form-label-sm mb-1">School</label>
                 {{ membership_form.school }}
                 {% if membership_form.school.errors %}
                   <div class="invalid-feedback d-block">
@@ -145,9 +145,9 @@
                 {% endif %}
               </div>
 
-              <div class="col-12 col-md-3">
+              <div class="col-12 col-sm-6 col-lg-3 col-xl-3">
                 <label for="{{ membership_form.job_title.id_for_label }}"
-                       class="form-label form-label-sm mb-1">Job title</label>
+                      class="form-label form-label-sm mb-1">Job title</label>
                 {{ membership_form.job_title }}
                 {% if membership_form.job_title.errors %}
                   <div class="invalid-feedback d-block">
@@ -156,9 +156,9 @@
                 {% endif %}
               </div>
 
-              <div class="col-12 col-md-3">
-                <label for="{{ membership_form.login_role.id_for_label }}"
-                       class="form-label form-label-sm mb-1">Login role</label>
+              <div class="col-12 col-sm-6 col-lg-3 col-xl-2">
+                <label for "{{ membership_form.login_role.id_for_label }}"
+                      class="form-label form-label-sm mb-1">Login role</label>
                 {{ membership_form.login_role }}
                 {% if membership_form.login_role.errors %}
                   <div class="invalid-feedback d-block">
@@ -167,9 +167,9 @@
                 {% endif %}
               </div>
 
-              <div class="col-6 col-md-2">
+              <div class="col-6 col-sm-3 col-lg-2 col-xl-2">
                 <label for="{{ membership_form.start_date.id_for_label }}"
-                       class="form-label form-label-sm mb-1">Start</label>
+                      class="form-label form-label-sm mb-1">Start</label>
                 {{ membership_form.start_date }}
                 {% if membership_form.start_date.errors %}
                   <div class="invalid-feedback d-block">
@@ -178,9 +178,9 @@
                 {% endif %}
               </div>
 
-              <div class="col-6 col-md-2">
+              <div class="col-6 col-sm-3 col-lg-2 col-xl-2">
                 <label for="{{ membership_form.end_date.id_for_label }}"
-                       class="form-label form-label-sm mb-1">End</label>
+                      class="form-label form-label-sm mb-1">End</label>
                 {{ membership_form.end_date }}
                 {% if membership_form.end_date.errors %}
                   <div class="invalid-feedback d-block">
@@ -189,8 +189,8 @@
                 {% endif %}
               </div>
 
-              <div class="col-12 col-md-auto ms-auto">
-                <button type="submit" class="btn btn-sm btn-primary mt-2 mt-md-0">
+              <div class="col-12 col-sm-6 col-lg-auto ms-sm-auto">
+                <button type="submit" class="btn btn-sm btn-primary mt-2 mt-sm-0 w-100 w-lg-auto">
                   Add membership
                 </button>
               </div>
@@ -204,10 +204,13 @@
               <thead class="table-light">
                 <tr>
                   <th scope="col">School</th>
-                  <th scope="col">Job title</th>
+                  {% comment %} <th scope="col">Job title</th> {% endcomment %}
                   <th scope="col">Login role</th>
-                  <th scope="col">Validity</th>
+                  <th scope="col">Started/Ended</th>
                   <th scope="col" class="text-end">Status &amp; audit</th>
+                  {% if user.is_superuser or perms.accounts.change_staffschoolmembership or perms.accounts.delete_staffschoolmembership %}
+                    <th scope="col" class="text-end">Actions</th>
+                  {% endif %}
                 </tr>
               </thead>
               <tbody>
@@ -221,13 +224,13 @@
                         {{ m.school.emis_school_no }}
                       </div>
                     </td>
-                    <td>
+                    {% comment %} <td>
                       {% if m.job_title %}
                         {{ m.job_title.label }}
                       {% else %}
                         <span class="text-body-secondary">—</span>
                       {% endif %}
-                    </td>
+                    </td> {% endcomment %}
                     <td>
                       {% if m.login_role %}
                         {{ m.login_role }}
@@ -237,15 +240,15 @@
                     </td>
                     <td class="small">
                       {% if m.start_date %}
-                        From {{ m.start_date|date:"Y-m-d" }}
+                        {{ m.start_date|date:"Y-m-d" }} to 
                       {% else %}
-                        From <span class="text-body-secondary">—</span>
+                        <span class="text-body-secondary">—</span>
                       {% endif %}
                       <br>
                       {% if m.end_date %}
-                        To {{ m.end_date|date:"Y-m-d" }}
+                        {{ m.end_date|date:"Y-m-d" }}
                       {% else %}
-                        To <span class="text-body-secondary">open-ended</span>
+                        <span class="text-body-secondary">Now</span>
                       {% endif %}
                     </td>
                     <td class="text-end small">
@@ -279,6 +282,23 @@
                         </div>
                       {% endif %}
                     </td>
+                    {% if user.is_superuser or perms.accounts.change_staffschoolmembership or perms.accounts.delete_staffschoolmembership %}
+                      <td class="text-end">
+                        {% if user.is_superuser or perms.accounts.change_staffschoolmembership %}
+                          <a href="{% url 'accounts:staff_membership_edit' staff.pk m.pk %}"
+                            class="btn btn-sm btn-outline-secondary me-1">
+                            Edit
+                          </a>
+                        {% endif %}
+                        {% if user.is_superuser or perms.accounts.delete_staffschoolmembership %}
+                          <a href="{% url 'accounts:staff_membership_delete' staff.pk m.pk %}"
+                            class="btn btn-sm btn-outline-danger">
+                            Delete
+                          </a>
+                        {% endif %}
+                      </td>
+                    {% endif %}
+
                   </tr>
                 {% endfor %}
               </tbody>
