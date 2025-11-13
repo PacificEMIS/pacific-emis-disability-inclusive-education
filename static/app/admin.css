@@ -9,20 +9,29 @@
   background-color: var(--bs-primary);
 }
 .sidebar .nav-link:hover {
-  background-color: rgba(0,0,0,.04);
+  color: var(--bs-body-color);
+  background-color: rgba(0,0,0,.08);
 }
 
 /* Make offcanvas look like static sidebar on md+ */
 @media (min-width: 768px) {
   .offcanvas-md {
     position: sticky !important;
-    top: 56px; /* height of header */
-    height: calc(100vh - 56px);
+    top: 0; /* was 56px */
+    height: 100vh; /* or just auto if you prefer */
     transform: none !important;
     visibility: visible !important;
     border-right: 1px solid var(--bs-border-color);
   }
 }
+
+/* sidebar content to scroll nicely within its own area */
+/* @media (min-width: 768px) {
+  .offcanvas-md .offcanvas-body {
+    max-height: 100vh;
+    overflow-y: auto;
+  }
+} */
 
 /* Card polish */
 .card {

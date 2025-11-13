@@ -1,0 +1,298 @@
+{% extends "base.html" %}
+{% block title %}Staff — {{ staff.user.get_full_name|default:staff.user.username }}{% endblock %}
+
+{% block content %}
+
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+  <div>
+    <h1 class="h4 mb-0">
+      {% if staff.user.first_name or staff.user.last_name %}
+        {{ staff.user.first_name }} {{ staff.user.last_name }}
+      {% else %}
+        {{ staff.user.username }}
+      {% endif %}
+    </h1>
+    <div class="small text-body-secondary">
+      Username: {{ staff.user.username }}
+      {% if staff.user.email %}
+        · {{ staff.user.email }}
+      {% endif %}
+    </div>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'accounts:staff_list' %}" class="btn btn-sm btn-outline-secondary">
+      &larr; Back to staff
+    </a>
+    {# still a placeholder; no functional edit yet #}
+    {% if user.is_superuser or perms.accounts.change_staff %}
+      <button type="button" class="btn btn-sm btn-primary" disabled>
+        Edit (coming soon)
+      </button>
+    {% endif %}
+
+  </div>
+</div>
+
+<div class="row g-3">
+
+  <!-- Profile / account summary -->
+  <div class="col-12 col-xl-4">
+    <div class="card shadow-sm h-100">
+      <div class="card-header">
+        <h2 class="h6 mb-0">Profile</h2>
+      </div>
+      <div class="card-body small">
+        <dl class="row mb-2">
+          <dt class="col-5 col-sm-4">Name</dt>
+          <dd class="col-7 col-sm-8">
+            {% if staff.user.first_name or staff.user.last_name %}
+              {{ staff.user.first_name }} {{ staff.user.last_name }}
+            {% else %}
+              <span class="text-body-secondary">Not set</span>
+            {% endif %}
+          </dd>
+
+          <dt class="col-5 col-sm-4">Username</dt>
+          <dd class="col-7 col-sm-8">
+            {{ staff.user.username }}
+          </dd>
+
+          <dt class="col-5 col-sm-4">Email</dt>
+          <dd class="col-7 col-sm-8">
+            {% if staff.user.email %}
+              {{ staff.user.email }}
+            {% else %}
+              <span class="text-body-secondary">Not set</span>
+            {% endif %}
+          </dd>
+
+          <dt class="col-5 col-sm-4">Status</dt>
+          <dd class="col-7 col-sm-8">
+            {% if staff.user.is_active %}
+              <span class="badge text-bg-success">Active</span>
+            {% else %}
+              <span class="badge text-bg-secondary">Inactive</span>
+            {% endif %}
+          </dd>
+
+          <dt class="col-5 col-sm-4">Role flags</dt>
+          <dd class="col-7 col-sm-8">
+            {% if staff.user.is_superuser %}
+              <span class="badge text-bg-danger me-1">Superuser</span>
+            {% endif %}
+            {% if staff.user.is_staff %}
+              <span class="badge text-bg-primary me-1">Staff</span>
+            {% endif %}
+            {% if not staff.user.is_superuser and not staff.user.is_staff %}
+              <span class="text-body-secondary">Standard user</span>
+            {% endif %}
+          </dd>
+        </dl>
+
+        <hr>
+
+        <dl class="row mb-0">
+          <dt class="col-5 col-sm-4">Created</dt>
+          <dd class="col-7 col-sm-8">
+            {{ staff.created_at|date:"Y-m-d" }}
+            {% if staff.created_by %}
+              <span class="text-body-secondary">
+                · by {{ staff.created_by.get_full_name|default:staff.created_by.username }}
+              </span>
+            {% endif %}
+          </dd>
+
+          <dt class="col-5 col-sm-4">Last updated</dt>
+          <dd class="col-7 col-sm-8">
+            {{ staff.last_updated_at|date:"Y-m-d" }}
+            {% if staff.last_updated_by %}
+              <span class="text-body-secondary">
+                · by {{ staff.last_updated_by.get_full_name|default:staff.last_updated_by.username }}
+              </span>
+            {% endif %}
+          </dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <!-- School memberships -->
+  <div class="col-12 col-xl-8">
+    <div class="card shadow-sm h-100">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <h2 class="h6 mb-0">School memberships</h2>
+        <span class="badge text-bg-light text-body-secondary">
+          {{ staff.memberships.count }} total
+        </span>
+      </div>
+
+      <div class="card-body p-0">
+
+        {# Inline Add Membership form #}
+        {% if can_add_membership and membership_form %}
+          <div class="border-bottom px-3 py-2">
+            <form method="post" class="row g-2 align-items-end">
+              {% csrf_token %}
+
+              <div class="col-12 col-md-4">
+                <label for="{{ membership_form.school.id_for_label }}"
+                       class="form-label form-label-sm mb-1">School</label>
+                {{ membership_form.school }}
+                {% if membership_form.school.errors %}
+                  <div class="invalid-feedback d-block">
+                    {{ membership_form.school.errors|striptags }}
+                  </div>
+                {% endif %}
+              </div>
+
+              <div class="col-12 col-md-3">
+                <label for="{{ membership_form.job_title.id_for_label }}"
+                       class="form-label form-label-sm mb-1">Job title</label>
+                {{ membership_form.job_title }}
+                {% if membership_form.job_title.errors %}
+                  <div class="invalid-feedback d-block">
+                    {{ membership_form.job_title.errors|striptags }}
+                  </div>
+                {% endif %}
+              </div>
+
+              <div class="col-12 col-md-3">
+                <label for="{{ membership_form.login_role.id_for_label }}"
+                       class="form-label form-label-sm mb-1">Login role</label>
+                {{ membership_form.login_role }}
+                {% if membership_form.login_role.errors %}
+                  <div class="invalid-feedback d-block">
+                    {{ membership_form.login_role.errors|striptags }}
+                  </div>
+                {% endif %}
+              </div>
+
+              <div class="col-6 col-md-2">
+                <label for="{{ membership_form.start_date.id_for_label }}"
+                       class="form-label form-label-sm mb-1">Start</label>
+                {{ membership_form.start_date }}
+                {% if membership_form.start_date.errors %}
+                  <div class="invalid-feedback d-block">
+                    {{ membership_form.start_date.errors|striptags }}
+                  </div>
+                {% endif %}
+              </div>
+
+              <div class="col-6 col-md-2">
+                <label for="{{ membership_form.end_date.id_for_label }}"
+                       class="form-label form-label-sm mb-1">End</label>
+                {{ membership_form.end_date }}
+                {% if membership_form.end_date.errors %}
+                  <div class="invalid-feedback d-block">
+                    {{ membership_form.end_date.errors|striptags }}
+                  </div>
+                {% endif %}
+              </div>
+
+              <div class="col-12 col-md-auto ms-auto">
+                <button type="submit" class="btn btn-sm btn-primary mt-2 mt-md-0">
+                  Add membership
+                </button>
+              </div>
+            </form>
+          </div>
+        {% endif %}
+
+        {% if staff.memberships.all %}
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th scope="col">School</th>
+                  <th scope="col">Job title</th>
+                  <th scope="col">Login role</th>
+                  <th scope="col">Validity</th>
+                  <th scope="col" class="text-end">Status &amp; audit</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for m in staff.memberships.all %}
+                  <tr>
+                    <td>
+                      <div class="fw-semibold">
+                        {{ m.school.emis_school_name }}
+                      </div>
+                      <div class="small text-body-secondary">
+                        {{ m.school.emis_school_no }}
+                      </div>
+                    </td>
+                    <td>
+                      {% if m.job_title %}
+                        {{ m.job_title.label }}
+                      {% else %}
+                        <span class="text-body-secondary">—</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      {% if m.login_role %}
+                        {{ m.login_role }}
+                      {% else %}
+                        <span class="text-body-secondary">—</span>
+                      {% endif %}
+                    </td>
+                    <td class="small">
+                      {% if m.start_date %}
+                        From {{ m.start_date|date:"Y-m-d" }}
+                      {% else %}
+                        From <span class="text-body-secondary">—</span>
+                      {% endif %}
+                      <br>
+                      {% if m.end_date %}
+                        To {{ m.end_date|date:"Y-m-d" }}
+                      {% else %}
+                        To <span class="text-body-secondary">open-ended</span>
+                      {% endif %}
+                    </td>
+                    <td class="text-end small">
+                      <div class="mb-1">
+                        {% if m.is_active %}
+                          <span class="badge text-bg-success">Active</span>
+                        {% else %}
+                          <span class="badge text-bg-secondary">Inactive</span>
+                        {% endif %}
+                      </div>
+
+                      {% if m.created_at %}
+                        <div class="text-body-secondary">
+                          Created {{ m.created_at|date:"Y-m-d" }}
+                          {% if m.created_by %}
+                            <span>
+                              · by {{ m.created_by.get_full_name|default:m.created_by.username }}
+                            </span>
+                          {% endif %}
+                        </div>
+                      {% endif %}
+
+                      {% if m.last_updated_at %}
+                        <div class="text-body-secondary">
+                          Updated {{ m.last_updated_at|date:"Y-m-d" }}
+                          {% if m.last_updated_by %}
+                            <span>
+                              · by {{ m.last_updated_by.get_full_name|default:m.last_updated_by.username }}
+                            </span>
+                          {% endif %}
+                        </div>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="p-3 text-center text-body-secondary small">
+            No memberships recorded for this staff member.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

@@ -18,13 +18,17 @@ class Student(models.Model):
         blank=True,
     )
 
-    # metadata
+    # Audit
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True,
-        on_delete=models.SET_NULL, related_name="students_created",
+        on_delete=models.SET_NULL, related_name="students_created"
     )
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    last_updated_at = models.DateTimeField(auto_now=True)
+    last_updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="students_updated"
+    )
 
     class Meta:
         indexes = [
@@ -90,10 +94,14 @@ class StudentSchoolEnrolment(models.Model):
     # Audit
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True,
-        on_delete=models.SET_NULL, related_name="student_enrolments_created",
+        on_delete=models.SET_NULL, related_name="student_enrolments_created"
     )
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    last_updated_at = models.DateTimeField(auto_now=True)
+    last_updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="student_enrolments_updated"
+    )
 
     class Meta:
         # One row per (student, school, year) — prevents dup enrolments in same year/school

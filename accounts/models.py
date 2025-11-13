@@ -1,4 +1,3 @@
-# accounts/models.py
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
@@ -12,10 +11,17 @@ class Staff(models.Model):
     One Staff per auth user (extensible place for HR-ish attributes later).
     """
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="staff")
+    
+     # Audit
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True,
         on_delete=models.SET_NULL, related_name="staff_created"
+    )
+    last_updated_at = models.DateTimeField(auto_now=True)
+    last_updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="staff_updated"
     )
 
     # Associations to schools live on the through model:
@@ -69,13 +75,16 @@ class StaffSchoolMembership(models.Model):
     start_date = models.DateField(null=True, blank=True)
     end_date   = models.DateField(null=True, blank=True)
 
+    # Audit
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name="staffschoolmembership_created"
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="staffschoolmembership_created"
+    )
+    last_updated_at = models.DateTimeField(auto_now=True)
+    last_updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="staffschoolmembership_updated"
     )
 
     class Meta:
