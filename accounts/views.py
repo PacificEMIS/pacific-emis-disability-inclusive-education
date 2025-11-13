@@ -3,11 +3,16 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.paginator import Paginator
-from django.db.models import Q, Prefetch
-from django.shortcuts import render, redirect
+from django.db.models import Q, Prefetch, OuterRef, Subquery
+from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse, NoReverseMatch
 
 from accounts.models import Staff, StaffSchoolMembership
+from accounts.forms import StaffSchoolMembershipForm
+from integrations.models import EmisSchool
+
+
+PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
 
 @login_required
 def post_login_router(request):
@@ -80,22 +85,89 @@ def _page_window(page_obj, radius=2, edges=2):
 @login_required
 def staff_list(request):
     q = (request.GET.get("q") or "").strip()
-    per_page = int(request.GET.get("per_page", 25))
 
-    staff_qs = Staff.objects.select_related("user")
+    # Filters
+    school_filter = (request.GET.get("school") or "").strip()      # EmisSchool.emis_school_no
+    email_filter = (request.GET.get("email") or "").strip()
+
+    # Sorting
+    sort = (request.GET.get("sort") or "").strip().lower()
+    dir_ = (request.GET.get("dir") or "asc").strip().lower()
+    dir_ = "desc" if dir_ == "desc" else "asc"  # sanitize
+
+    # Per-page
+    try:
+        per_page = int(request.GET.get("per_page", 25))
+    except ValueError:
+        per_page = 25
+    if per_page not in PAGE_SIZE_OPTIONS:
+        per_page = 25
+
+    # Picklists (active only; adjust if you want all)
+    schools = EmisSchool.objects.filter(active=True).order_by("emis_school_no")
+
+    # ---- Latest membership subqueries (for "current appointment" + filtering/sorting helper)
+    membership_qs = (
+        StaffSchoolMembership.objects
+        .filter(staff=OuterRef("pk"))
+        .order_by("-id")  # most recently created membership; simple + robust
+    )
+
+    latest_school_no = Subquery(membership_qs.values("school__emis_school_no")[:1])
+    latest_school_name = Subquery(membership_qs.values("school__emis_school_name")[:1])
+
+    staff_qs = (
+        Staff.objects
+        .select_related("user")
+        .annotate(
+            latest_school_no=latest_school_no,
+            latest_school_name=latest_school_name,
+        )
+        .prefetch_related(
+            Prefetch(
+                "memberships",
+                queryset=StaffSchoolMembership.objects.select_related("school", "job_title"),
+            )
+        )
+    )
+
+    # Search by name
     if q:
         staff_qs = staff_qs.filter(
-            Q(user__username__icontains=q) |
             Q(user__first_name__icontains=q) |
-            Q(user__last_name__icontains=q) |
-            Q(user__email__icontains=q)
+            Q(user__last_name__icontains=q)
         )
 
-    memberships_qs = StaffSchoolMembership.objects.select_related("school", "job_title")
-    staff_qs = staff_qs.prefetch_related(Prefetch("memberships", queryset=memberships_qs))
+    # Search by email
+    if email_filter:
+        staff_qs = staff_qs.filter(
+            user__email__icontains=email_filter
+        )
 
-    paginator = Paginator(staff_qs.order_by("user__last_name", "user__first_name"), per_page)
-    page_obj = paginator.get_page(request.GET.get("page"))
+    # Filter by school (any membership at that school)
+    if school_filter:
+        staff_qs = staff_qs.filter(memberships__school__emis_school_no=school_filter).distinct()
+
+    # Sorting map: align with table columns: Name, Email, Current Appointment
+    sort_map = {
+        "name": ("user__last_name", "user__first_name"),
+        "email": ("user__email", "user__last_name", "user__first_name"),
+        "appointment": ("latest_school_name", "latest_school_no", "user__last_name", "user__first_name"),
+    }
+
+    if sort in sort_map:
+        order_fields = sort_map[sort]
+        if dir_ == "desc":
+            order_fields = tuple(f"-{f}" for f in order_fields)
+        staff_qs = staff_qs.order_by(*order_fields)
+    else:
+        # Default ordering by name
+        staff_qs = staff_qs.order_by("user__last_name", "user__first_name")
+
+    # Pagination
+    paginator = Paginator(staff_qs, per_page)
+    page_number = request.GET.get("page") or 1
+    page_obj = paginator.get_page(page_number)
 
     return render(
         request,
@@ -105,7 +177,61 @@ def staff_list(request):
             "page_obj": page_obj,
             "q": q,
             "per_page": per_page,
-            "page_size_options": [10, 25, 50, 100],
+            "page_size_options": PAGE_SIZE_OPTIONS,
             "page_links": _page_window(page_obj),
+
+            # filters + lists
+            "school": school_filter,
+            "email": email_filter,
+            "schools": schools,
+
+            # sorting
+            "sort": sort,
+            "dir": dir_,
         },
     )
+
+@login_required
+def staff_detail(request, pk):
+    staff = get_object_or_404(
+        Staff.objects.select_related("user").prefetch_related(
+            "memberships__school",
+            "memberships__job_title",
+            "memberships__created_by",
+            "memberships__last_updated_by",
+        ),
+        pk=pk,
+    )
+
+    # Permission: who can add memberships?
+    can_add_membership = (
+        request.user.is_superuser
+        or request.user.has_perm("accounts.add_staffschoolmembership")
+    )
+
+    membership_form = StaffSchoolMembershipForm(request.POST or None) if can_add_membership else None
+
+    if request.method == "POST":
+        if not can_add_membership:
+            messages.error(request, "You do not have permission to add school memberships.")
+        elif membership_form.is_valid():
+            obj = membership_form.save(commit=False)
+            obj.staff = staff
+
+            # audit fields (if defined on the model)
+            if hasattr(obj, "created_by_id") and obj.created_by_id is None:
+                obj.created_by = request.user
+            if hasattr(obj, "last_updated_by_id") and obj.last_updated_by_id is None:
+                obj.last_updated_by = request.user
+
+            obj.save()
+            messages.success(request, "School membership added.")
+            return redirect("accounts:staff_detail", pk=staff.pk)
+
+    context = {
+        "staff": staff,
+        "active": "staff",
+        "membership_form": membership_form,
+        "can_add_membership": can_add_membership,
+    }
+    return render(request, "accounts/staff_detail.html", context)

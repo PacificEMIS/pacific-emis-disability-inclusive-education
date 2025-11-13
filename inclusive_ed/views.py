@@ -193,7 +193,7 @@ def dashboard(request):
 
 
 @login_required
-def new_student(request):
+def student_new(request):
     assignments = (EmisSchool.objects
                    .filter(active=True)
                    .only("emis_school_no", "emis_school_name")
@@ -222,7 +222,7 @@ def new_student(request):
 
         if errs:
             for e in errs: messages.error(request, e)
-            return render(request, "app/new_student.html",
+            return render(request, "inclusive_ed/student_new.html",
                           {"class_levels": class_levels, "assignments": assignments}, status=400)
 
         Student.objects.create(
@@ -236,5 +236,5 @@ def new_student(request):
         messages.success(request, "Student created.")
         return redirect("inclusive_ed:dashboard")
 
-    return render(request, "inclusive_ed/new_student.html",
+    return render(request, "inclusive_ed/student_new.html",
                   {"class_levels": class_levels, "assignments": assignments})

@@ -1,6 +1,7 @@
-# inclusive_ed/admin.py
 from django.contrib import admin
-from .models import Student, StudentSchoolEnrolment
+from inclusive_ed.models import Student, StudentSchoolEnrolment
+
+from accounts.mixins import CreatedUpdatedAuditMixin
 
 # Inline to edit a student's school/year enrolments (with disability fields)
 class StudentSchoolEnrolmentInline(admin.TabularInline):
@@ -15,13 +16,13 @@ class StudentSchoolEnrolmentInline(admin.TabularInline):
         "seeing_flag", "hearing_flag", "mobility_flag", "fine_motor_flag",
         "speech_flag", "learning_flag", "memory_flag", "attention_flag",
         "behaviour_flag", "social_flag", "anxiety_freq", "depression_freq",
-        "created_at", "updated_at",
+        "created_at", "created_by", "last_updated_at", "last_updated_by"
     )
-    readonly_fields = ("created_at", "updated_at")
+    readonly_fields = ("created_at", "created_by", "last_updated_at", "last_updated_by")
 
 
 @admin.register(Student)
-class StudentAdmin(admin.ModelAdmin):
+class StudentAdmin(CreatedUpdatedAuditMixin, admin.ModelAdmin):
     ordering = ("last_name", "first_name")
     search_fields = ("first_name", "last_name")
     # Filter by related enrolment fields
@@ -30,7 +31,7 @@ class StudentAdmin(admin.ModelAdmin):
         ("enrolments__school_year", admin.RelatedOnlyFieldListFilter),
         ("enrolments__class_level", admin.RelatedOnlyFieldListFilter),
     )
-    readonly_fields = ("created_at", "updated_at")
+    readonly_fields = ("created_at", "created_by", "last_updated_at", "last_updated_by")
     inlines = [StudentSchoolEnrolmentInline]
 
     list_display = (
@@ -39,8 +40,8 @@ class StudentAdmin(admin.ModelAdmin):
         "date_of_birth",
         "current_school_names",
         "active_enrolments_count",
+        "created_by",
         "created_at",
-        "updated_at",
     )
 
     def current_school_names(self, obj):
@@ -55,7 +56,7 @@ class StudentAdmin(admin.ModelAdmin):
 
 
 # @admin.register(StudentSchoolEnrolment)
-# class StudentSchoolEnrolmentAdmin(admin.ModelAdmin):
+# class StudentSchoolEnrolmentAdmin(CreatedUpdatedAuditMixin, admin.ModelAdmin):
 #     ordering = ("school_year__code", "school__emis_school_no", "student__last_name")
 #     search_fields = (
 #         "student__first_name",
