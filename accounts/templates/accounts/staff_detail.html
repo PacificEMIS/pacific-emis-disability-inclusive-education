@@ -24,11 +24,11 @@
       &larr; Back to staff
     </a>
     {# still a placeholder; no functional edit yet #}
-    {% if user.is_superuser or perms.accounts.change_staff %}
+    {% comment %} {% if user.is_superuser or perms.accounts.change_staff %}
       <button type="button" class="btn btn-sm btn-primary" disabled>
         Edit (coming soon)
       </button>
-    {% endif %}
+    {% endif %} {% endcomment %}
 
   </div>
 </div>
