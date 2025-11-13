@@ -1,0 +1,359 @@
+{% extends "base.html" %}
+{% block title %}Student — {{ student.last_name }}, {{ student.first_name }}{% endblock %}
+
+{% block content %}
+
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+  <div>
+    <h1 class="h4 mb-0">
+      {{ student.first_name }} {{ student.last_name }}
+    </h1>
+    <div class="small text-body-secondary">
+      Date of birth: {{ student.date_of_birth|date:"Y-m-d" }}
+      {% if student.current_school_names %}
+        · Current school(s): {{ student.current_school_names }}
+      {% endif %}
+    </div>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'inclusive_ed:student_list' %}" class="btn btn-sm btn-outline-secondary">
+      &larr; Back to students
+    </a>
+    {# Placeholder for future edit permissions #}
+    {% if user.is_superuser %}
+      <button type="button" class="btn btn-sm btn-primary" disabled>
+        Edit (coming soon)
+      </button>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row g-3">
+
+  <!-- Profile / audit summary -->
+  <div class="col-12 col-xl-4">
+    <div class="card shadow-sm h-100">
+      <div class="card-header">
+        <h2 class="h6 mb-0">Student profile</h2>
+      </div>
+      <div class="card-body small">
+        <dl class="row mb-2">
+          <dt class="col-5 col-sm-4">Name</dt>
+          <dd class="col-7 col-sm-8">
+            {{ student.first_name }} {{ student.last_name }}
+          </dd>
+
+          <dt class="col-5 col-sm-4">Date of birth</dt>
+          <dd class="col-7 col-sm-8">
+            {{ student.date_of_birth|date:"Y-m-d" }}
+          </dd>
+
+          <dt class="col-5 col-sm-4">Current school(s)</dt>
+          <dd class="col-7 col-sm-8">
+            {% if student.current_school_names %}
+              {{ student.current_school_names }}
+            {% else %}
+              <span class="text-body-secondary">None recorded</span>
+            {% endif %}
+          </dd>
+        </dl>
+
+        <hr>
+
+        <dl class="row mb-0">
+          <dt class="col-5 col-sm-4">Created</dt>
+          <dd class="col-7 col-sm-8">
+            {{ student.created_at|date:"Y-m-d" }}
+            {% if student.created_by %}
+              <span class="text-body-secondary">
+                · by {{ student.created_by.get_full_name|default:student.created_by.username }}
+              </span>
+            {% endif %}
+          </dd>
+
+          <dt class="col-5 col-sm-4">Last updated</dt>
+          <dd class="col-7 col-sm-8">
+            {{ student.last_updated_at|date:"Y-m-d" }}
+            {% if student.last_updated_by %}
+              <span class="text-body-secondary">
+                · by {{ student.last_updated_by.get_full_name|default:student.last_updated_by.username }}
+              </span>
+            {% endif %}
+          </dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <!-- School enrolments -->
+  <div class="col-12 col-xl-8">
+    <div class="card shadow-sm h-100">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <h2 class="h6 mb-0">School enrolments</h2>
+        <span class="badge text-bg-light text-body-secondary">
+          {{ enrolments|length }} total (usually the year the disability was recorded)
+        </span>
+      </div>
+
+      <div class="card-body p-0">
+        {% if enrolments %}
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th scope="col">School</th>
+                  <th scope="col">School year</th>
+                  <th scope="col">Class level</th>
+                  {% comment %} <th scope="col">Start/End Dates</th> {% endcomment %}
+                  <th scope="col" class="text-end">Status &amp; audit</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for e in enrolments %}
+                  <tr>
+                    <td>
+                      <div class="fw-semibold">
+                        {{ e.school.emis_school_name }}
+                      </div>
+                      <div class="small text-body-secondary">
+                        {{ e.school.emis_school_no }}
+                      </div>
+                    </td>
+                    <td>
+                      {% if e.school_year %}
+                        {% if e.school_year.label %}{{ e.school_year.label }}{% else %}{{ e.school_year.code }}{% endif %}
+                      {% else %}
+                        <span class="text-body-secondary">—</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      {% if e.class_level %}
+                        {{ e.class_level.code }}{% if e.class_level.label %} — {{ e.class_level.label }}{% endif %}
+                      {% else %}
+                        <span class="text-body-secondary">—</span>
+                      {% endif %}
+                    </td>
+                    {% comment %} <td class="small">
+                      {% if e.start_date %}
+                        From {{ e.start_date|date:"Y-m-d" }}
+                      {% else %}
+                        From <span class="text-body-secondary">—</span>
+                      {% endif %}
+                      <br>
+                      {% if e.end_date %}
+                        To {{ e.end_date|date:"Y-m-d" }}
+                      {% else %}
+                        To <span class="text-body-secondary">open-ended</span>
+                      {% endif %}
+                    </td> {% endcomment %}
+                    <td class="text-end small">
+                      <div class="mb-1">
+                        {% if e.is_active %}
+                          <span class="badge text-bg-success">Active</span>
+                        {% else %}
+                          <span class="badge text-bg-secondary">Inactive</span>
+                        {% endif %}
+                      </div>
+
+                      {% if e.created_at %}
+                        <div class="text-body-secondary">
+                          Created {{ e.created_at|date:"Y-m-d" }}
+                          {% if e.created_by %}
+                            <span>
+                              · by {{ e.created_by.get_full_name|default:e.created_by.username }}
+                            </span>
+                          {% endif %}
+                        </div>
+                      {% endif %}
+
+                      {% if e.last_updated_at %}
+                        <div class="text-body-secondary">
+                          Updated {{ e.last_updated_at|date:"Y-m-d" }}
+                          {% if e.last_updated_by %}
+                            <span>
+                              · by {{ e.last_updated_by.get_full_name|default:e.last_updated_by.username }}
+                            </span>
+                          {% endif %}
+                        </div>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="p-3 text-center text-body-secondary small">
+            No enrolments recorded for this student.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{# Latest questionnaire & disability data #}
+<div class="row g-3 mt-1">
+  <div class="col-12">
+    <div class="card shadow-sm">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <h2 class="h6 mb-0">Questionnaire &amp; disability data</h2>
+        {% if latest_enrolment %}
+          <span class="badge text-bg-light text-body-secondary">
+            Latest data from enrolment: {{ latest_enrolment.school_year.code }} at {{ latest_enrolment.school.emis_school_name }}
+          </span>
+        {% endif %}
+      </div>
+      <div class="card-body small">
+        {% if latest_enrolment %}
+          <div class="row">
+            <div class="col-12 col-md-6">
+              <h3 class="h6">Functioning / participation</h3>
+              <dl class="row mb-0">
+                <dt class="col-6">Seeing</dt>
+                <dd class="col-6">
+                  {% if latest_enrolment.seeing_flag is True %}
+                    <span class="badge text-bg-danger">Flagged</span>
+                  {% elif latest_enrolment.seeing_flag is False %}
+                    <span class="badge text-bg-success">No difficulty</span>
+                  {% else %}
+                    <span class="text-body-secondary">Not recorded</span>
+                  {% endif %}
+                </dd>
+
+                <dt class="col-6">Hearing</dt>
+                <dd class="col-6">
+                  {% if latest_enrolment.hearing_flag is True %}
+                    <span class="badge text-bg-danger">Flagged</span>
+                  {% elif latest_enrolment.hearing_flag is False %}
+                    <span class="badge text-bg-success">No difficulty</span>
+                  {% else %}
+                    <span class="text-body-secondary">Not recorded</span>
+                  {% endif %}
+                </dd>
+
+                <dt class="col-6">Mobility</dt>
+                <dd class="col-6">
+                  {% if latest_enrolment.mobility_flag is True %}
+                    <span class="badge text-bg-danger">Flagged</span>
+                  {% elif latest_enrolment.mobility_flag is False %}
+                    <span class="badge text-bg-success">No difficulty</span>
+                  {% else %}
+                    <span class="text-body-secondary">Not recorded</span>
+                  {% endif %}
+                </dd>
+
+                <dt class="col-6">Fine motor</dt>
+                <dd class="col-6">
+                  {% if latest_enrolment.fine_motor_flag is True %}
+                    <span class="badge text-bg-danger">Flagged</span>
+                  {% elif latest_enrolment.fine_motor_flag is False %}
+                    <span class="badge text-bg-success">No difficulty</span>
+                  {% else %}
+                    <span class="text-body-secondary">Not recorded</span>
+                  {% endif %}
+                </dd>
+
+                <dt class="col-6">Speech</dt>
+                <dd class="col-6">
+                  {% if latest_enrolment.speech_flag is True %}
+                    <span class="badge text-bg-danger">Flagged</span>
+                  {% elif latest_enrolment.speech_flag is False %}
+                    <span class="badge text-bg-success">No difficulty</span>
+                  {% else %}
+                    <span class="text-body-secondary">Not recorded</span>
+                  {% endif %}
+                </dd>
+              </dl>
+            </div>
+
+            <div class="col-12 col-md-6">
+              <h3 class="h6">Learning / behaviour / emotional</h3>
+              <dl class="row mb-0">
+                <dt class="col-6">Learning</dt>
+                <dd class="col-6">
+                  {% if latest_enrolment.learning_flag is True %}
+                    <span class="badge text-bg-danger">Flagged</span>
+                  {% elif latest_enrolment.learning_flag is False %}
+                    <span class="badge text-bg-success">No difficulty</span>
+                  {% else %}
+                    <span class="text-body-secondary">Not recorded</span>
+                  {% endif %}
+                </dd>
+
+                <dt class="col-6">Memory</dt>
+                <dd class="col-6">
+                  {% if latest_enrolment.memory_flag is True %}
+                    <span class="badge text-bg-danger">Flagged</span>
+                  {% elif latest_enrolment.memory_flag is False %}
+                    <span class="badge text-bg-success">No difficulty</span>
+                  {% else %}
+                    <span class="text-body-secondary">Not recorded</span>
+                  {% endif %}
+                </dd>
+
+                <dt class="col-6">Attention</dt>
+                <dd class="col-6">
+                  {% if latest_enrolment.attention_flag is True %}
+                    <span class="badge text-bg-danger">Flagged</span>
+                  {% elif latest_enrolment.attention_flag is False %}
+                    <span class="badge text-bg-success">No difficulty</span>
+                  {% else %}
+                    <span class="text-body-secondary">Not recorded</span>
+                  {% endif %}
+                </dd>
+
+                <dt class="col-6">Behaviour</dt>
+                <dd class="col-6">
+                  {% if latest_enrolment.behaviour_flag is True %}
+                    <span class="badge text-bg-danger">Flagged</span>
+                  {% elif latest_enrolment.behaviour_flag is False %}
+                    <span class="badge text-bg-success">No difficulty</span>
+                  {% else %}
+                    <span class="text-body-secondary">Not recorded</span>
+                  {% endif %}
+                </dd>
+
+                <dt class="col-6">Social</dt>
+                <dd class="col-6">
+                  {% if latest_enrolment.social_flag is True %}
+                    <span class="badge text-bg-danger">Flagged</span>
+                  {% elif latest_enrolment.social_flag is False %}
+                    <span class="badge text-bg-success">No difficulty</span>
+                  {% else %}
+                    <span class="text-body-secondary">Not recorded</span>
+                  {% endif %}
+                </dd>
+
+                <dt class="col-6">Anxiety (freq)</dt>
+                <dd class="col-6">
+                  {% if latest_enrolment.anxiety_freq is not None %}
+                    {{ latest_enrolment.anxiety_freq }}
+                  {% else %}
+                    <span class="text-body-secondary">Not recorded</span>
+                  {% endif %}
+                </dd>
+
+                <dt class="col-6">Depression (freq)</dt>
+                <dd class="col-6">
+                  {% if latest_enrolment.depression_freq is not None %}
+                    {{ latest_enrolment.depression_freq }}
+                  {% else %}
+                    <span class="text-body-secondary">Not recorded</span>
+                  {% endif %}
+                </dd>
+              </dl>
+            </div>
+          </div>
+        {% else %}
+          <p class="mb-0 text-body-secondary">
+            No questionnaire or disability data recorded yet for this student.
+          </p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
