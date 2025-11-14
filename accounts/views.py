@@ -6,6 +6,7 @@ from django.core.paginator import Paginator
 from django.db.models import Q, Prefetch, OuterRef, Subquery
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse, NoReverseMatch
+from django.utils.text import capfirst
 
 from accounts.models import Staff, StaffSchoolMembership
 from accounts.forms import StaffSchoolMembershipForm
@@ -13,6 +14,80 @@ from integrations.models import EmisSchool
 
 
 PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
+
+SPECIAL_PERMISSIONS = {
+    # codename: (bucket_key, human_model_label)
+    "access_inclusive_ed": ("access", "Disability-Inclusive Education app"),
+}
+
+def _summarize_permissions(perms_queryset):
+    """
+    Group permissions into action buckets (view/add/change/delete/access/other)
+    and return a list of sections ready for templates, e.g.:
+
+    [
+      {"key": "view", "label": "View", "models": ["Staff", "School"]},
+      {"key": "access", "label": "Access", "models": ["Disability-Inclusive Education app"]},
+      ...
+    ]
+    """
+    buckets = {
+        "view": set(),
+        "add": set(),
+        "change": set(),
+        "delete": set(),
+        "access": set(),  # for app-level access perms
+        "other": set(),
+    }
+
+    # Preload content_type for efficiency
+    perms = perms_queryset.select_related("content_type")
+
+    for p in perms:
+        codename = p.codename
+
+        # 1) Check for special/app-level custom permissions
+        special = SPECIAL_PERMISSIONS.get(codename)
+        if special is not None:
+            bucket_key, model_label = special
+            buckets[bucket_key].add(model_label)
+            continue
+
+        # 2) Standard Django model perms: view/add/change/delete_*
+        action_key = "other"
+        for action in ("view", "add", "change", "delete"):
+            if codename.startswith(f"{action}_"):
+                action_key = action
+                break
+
+        # 3) Use the model's verbose_name when available
+        model_class = p.content_type.model_class()
+        if model_class is not None:
+            model_label = capfirst(model_class._meta.verbose_name)
+        else:
+            model_label = capfirst(p.content_type.model.replace("_", " "))
+
+        buckets[action_key].add(model_label)
+
+    labels = {
+        "view": "View",
+        "add": "Add",
+        "change": "Change",
+        "delete": "Delete",
+        "access": "Access",
+        "other": "Other",
+    }
+
+    sections = []
+    for key in ("view", "add", "change", "delete", "access", "other"):
+        models = sorted(buckets[key])
+        if models:
+            sections.append({
+                "key": key,
+                "label": labels[key],
+                "models": models,
+            })
+    return sections
 
 @login_required
 def post_login_router(request):
@@ -199,6 +274,8 @@ def staff_detail(request, pk):
             "memberships__job_title",
             "memberships__created_by",
             "memberships__last_updated_by",
+            "user__groups__permissions",
+            "user__user_permissions"
         ),
         pk=pk,
     )
@@ -228,11 +305,33 @@ def staff_detail(request, pk):
             messages.success(request, "School membership added.")
             return redirect("accounts:staff_detail", pk=staff.pk)
 
+    user_obj = staff.user
+
+    groups = (
+        user_obj.groups
+        .all()
+        .prefetch_related("permissions__content_type")
+        .order_by("name")
+    )
+
+    group_permissions = []
+    for g in groups:
+        group_permissions.append({
+            "group": g,
+            "sections": _summarize_permissions(g.permissions.all()),
+        })
+
+    direct_permission_sections = _summarize_permissions(
+        user_obj.user_permissions.all().select_related("content_type")
+    )
+
     context = {
         "staff": staff,
         "active": "staff",
         "membership_form": membership_form,
         "can_add_membership": can_add_membership,
+        "group_permissions": group_permissions,
+        "direct_permission_sections": direct_permission_sections,
     }
     return render(request, "accounts/staff_detail.html", context)
 
