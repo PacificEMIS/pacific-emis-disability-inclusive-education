@@ -9,16 +9,23 @@ from django.db import transaction
 from inclusive_ed.models import Student, StudentSchoolEnrolment
 from integrations.models import EmisSchool, EmisWarehouseYear, EmisClassLevel
 
-
+# Expanded pools to reduce duplicate names
 FIRST_NAMES = [
     "Ari", "Ben", "Cita", "Dani", "Eli", "Fina", "Gabe", "Hana", "Ika",
     "Jori", "Keni", "Lani", "Mika", "Niko", "Ona", "Pasi", "Rina", "Sami",
-    "Tala", "Vika", "Wena", "Yani", "Zora"
+    "Tala", "Vika", "Wena", "Yani", "Zora",
+    "Alani", "Beniata", "Corin", "Dela", "Emani", "Fatu", "Gina", "Hiko",
+    "Inia", "Jona", "Keani", "Loma", "Malo", "Naea", "Olia", "Peni",
+    "Ratu", "Sione", "Tasi", "Ula", "Vani", "Waqa", "Yara", "Zeni",
 ]
+
 LAST_NAMES = [
     "Abel", "Beni", "Cabral", "Dano", "Emani", "Faro", "Gonzales", "Hare",
     "Isamu", "Jorin", "Katoa", "Loto", "Malo", "Nase", "Oto", "Paea",
-    "Ratu", "Sione", "Taito", "Ula", "Vakalahi", "Waqa", "Yano", "Zed"
+    "Ratu", "Sione", "Taito", "Ula", "Vakalahi", "Waqa", "Yano", "Zed",
+    "Akau", "Bale", "Cama", "Delai", "Eroni", "Fale", "Galo", "Hani",
+    "Isoa", "Jope", "Koro", "Langi", "Mata", "Nuku", "Osea", "Pule",
+    "Raea", "Saka", "Taito", "Uati", "Vera", "Wani", "Yale", "Zola",
 ]
 
 # Class level → official age (years)
@@ -38,15 +45,69 @@ LEVELS_BY_PATTERN = {
     "KSSS": ["SS1", "SS2", "SS3", "SS4"],
 }
 
+
 def pick_name() -> Tuple[str, str]:
     return random.choice(FIRST_NAMES), random.choice(LAST_NAMES)
 
-def random_bool(p_true: float = 0.2) -> bool:
-    return random.random() < p_true
 
-def random_freq_or_none() -> int | None:
-    # Roughly 25% None, else 0–4
-    return None if random.random() < 0.25 else random.randint(0, 4)
+def random_yes_no_or_none(p_yes: float = 0.15, p_none: float = 0.4) -> int | None:
+    """
+    Return 1 (Yes), 2 (No) or None.
+
+    Default: about 40% None (not recorded), 15% Yes, 45% No.
+    """
+    r = random.random()
+    if r < p_none:
+        return None
+    r2 = random.random()
+    if r2 < p_yes / (1 - p_none):
+        return 1  # Yes
+    return 2      # No
+
+
+def random_difficulty_or_none(p_none: float = 0.5) -> int | None:
+    """
+    Return a difficulty level: 1–4 or None.
+
+    Skewed towards 'No difficulty' and 'Some difficulty'.
+    """
+    if random.random() < p_none:
+        return None
+
+    # Weighted choice: 1 (50%), 2 (30%), 3 (15%), 4 (5%)
+    r = random.random()
+    if r < 0.5:
+        return 1
+    elif r < 0.8:
+        return 2
+    elif r < 0.95:
+        return 3
+    else:
+        return 4
+
+
+def random_emotional_freq_or_none(p_none: float = 0.5) -> int | None:
+    """
+    Return an emotional frequency: 1–5 or None.
+
+    Skewed so that 'Never' and 'A few times a year' are more common.
+    """
+    if random.random() < p_none:
+        return None
+
+    # 1: Daily, 2: Weekly, 3: Monthly, 4: Few times a year, 5: Never
+    r = random.random()
+    if r < 0.05:
+        return 1  # Daily
+    elif r < 0.15:
+        return 2  # Weekly
+    elif r < 0.30:
+        return 3  # Monthly
+    elif r < 0.55:
+        return 4  # A few times a year
+    else:
+        return 5  # Never
+
 
 def dob_for_level(level_code: str, school_year_code: str) -> date:
     """
@@ -59,11 +120,11 @@ def dob_for_level(level_code: str, school_year_code: str) -> date:
     age = base_age + random.choice([-1, 0, 0, 0, 1])  # skew towards exact age
     # Birthday somewhere within the calendar year (make it natural)
     birth_year = target_year - age
-    # Random day within the year
     start = date(birth_year, 1, 1)
     end = date(birth_year, 12, 31)
     delta_days = (end - start).days
     return start + timedelta(days=random.randint(0, delta_days))
+
 
 def pick_size_bucket() -> int:
     """
@@ -80,8 +141,9 @@ def pick_size_bucket() -> int:
     else:
         return random.randint(11, 30)
 
+
 class Command(BaseCommand):
-    help = "Seed sample Inclusive Ed data (Students + single Enrolment each) for school_year=2025."
+    help = "Seed sample Inclusive Ed data (Students + single Enrolment each) for a given school_year."
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -151,15 +213,22 @@ class Command(BaseCommand):
             total = sum(n for _, _, n in plan)
             self.stdout.write(self.style.WARNING("--- DRY RUN ---"))
             self.stdout.write(f"Target year: {year_code}")
-            self.stdout.write(f"Schools: KPS={len(kps_schools)}  KJSS={len(kjss_schools)}  KSSS={len(ksss_schools)}")
+            self.stdout.write(
+                f"Schools: KPS={len(kps_schools)}  KJSS={len(kjss_schools)}  KSSS={len(ksss_schools)}"
+            )
             self.stdout.write(f"Total new students planned: {total}")
             self.stdout.write("Sample (first 10 rows):")
             for sch, levels, n in plan[:10]:
-                self.stdout.write(f"  {sch.emis_school_no} → {n} students across levels {levels}")
+                self.stdout.write(
+                    f"  {sch.emis_school_no} → {n} students across levels {levels}"
+                )
             return
 
         created_students = 0
         created_enrols = 0
+
+        # Track name combinations to reduce duplicates across all schools
+        names_used: set[tuple[str, str]] = set()
 
         with transaction.atomic():
             for sch, levels, n in plan:
@@ -169,11 +238,16 @@ class Command(BaseCommand):
                     lvl = level_map[lvl_code]
 
                     # Build student with name + age-appropriate DOB
-                    first, last = pick_name()
-                    # Ensure duplicate names still acceptable; if you want stricter uniqueness, add a suffix
-                    if random.random() < 0.1:
-                        # 10% chance to append a letter to reduce identical collisions visually
-                        last += " " + random.choice(string.ascii_uppercase)
+                    # Try a few times to get a name combo not already used
+                    for _tries in range(5):
+                        first, last = pick_name()
+                        if (first, last) not in names_used:
+                            break
+                    names_used.add((first, last))
+
+                    # Occasionally add a letter to last name to visually break ties
+                    if random.random() < 0.05:
+                        last = f"{last} {random.choice(string.ascii_uppercase)}"
 
                     student = Student.objects.create(
                         first_name=first,
@@ -182,27 +256,37 @@ class Command(BaseCommand):
                     )
                     created_students += 1
 
-                    enrol = StudentSchoolEnrolment.objects.create(
+                    # CFT 1–20: randomized but with realistic distributions
+                    StudentSchoolEnrolment.objects.create(
                         student=student,
                         school=sch,
                         school_year=wy,
                         class_level=lvl,
-                        # disability flags, randomized
-                        seeing_flag=random_bool(),
-                        hearing_flag=random_bool(),
-                        mobility_flag=random_bool(),
-                        fine_motor_flag=random_bool(),
-                        speech_flag=random_bool(),
-                        learning_flag=random_bool(),
-                        memory_flag=random_bool(),
-                        attention_flag=random_bool(),
-                        behaviour_flag=random_bool(),
-                        social_flag=random_bool(),
-                        anxiety_freq=random_freq_or_none(),
-                        depression_freq=random_freq_or_none(),
+                        cft1_wears_glasses=random_yes_no_or_none(),
+                        cft2_difficulty_seeing_with_glasses=random_difficulty_or_none(),
+                        cft3_difficulty_seeing=random_difficulty_or_none(),
+                        cft4_has_hearing_aids=random_yes_no_or_none(),
+                        cft5_difficulty_hearing_with_aids=random_difficulty_or_none(),
+                        cft6_difficulty_hearing=random_difficulty_or_none(),
+                        cft7_uses_walking_equipment=random_yes_no_or_none(),
+                        cft8_difficulty_walking_without_equipment=random_difficulty_or_none(),
+                        cft9_difficulty_walking_with_equipment=random_difficulty_or_none(),
+                        cft10_difficulty_walking_compare_to_others=random_difficulty_or_none(),
+                        cft11_difficulty_picking_up_small_objects=random_difficulty_or_none(),
+                        cft12_difficulty_being_understood=random_difficulty_or_none(),
+                        cft13_difficulty_learning=random_difficulty_or_none(),
+                        cft14_difficulty_remembering=random_difficulty_or_none(),
+                        cft15_difficulty_concentrating=random_difficulty_or_none(),
+                        cft16_difficulty_accepting_change=random_difficulty_or_none(),
+                        cft17_difficulty_controlling_behaviour=random_difficulty_or_none(),
+                        cft18_difficulty_making_friends=random_difficulty_or_none(),
+                        cft19_anxious_frequency=random_emotional_freq_or_none(),
+                        cft20_depressed_frequency=random_emotional_freq_or_none(),
                     )
                     created_enrols += 1
 
-        self.stdout.write(self.style.SUCCESS(
-            f"Done. Created {created_students} students and {created_enrols} enrolments for year {year_code}."
-        ))
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"Done. Created {created_students} students and {created_enrols} enrolments for year {year_code}."
+            )
+        )

@@ -78,7 +78,7 @@ python manage.py seed_inclusive_ed --year 2025
 This command creates:
 - Random **students** with realistic names and date of birth close to their class level’s official age.  
 - A single **enrolment record per student**, linked to schools and class levels appropriate for their school code pattern.  
-- Randomized **disability indicators** (`seeing_flag`, `hearing_flag`, etc.).  
+- Randomized **disability indicators** (`cft1_wears_glasses`, `cft20_depressed_frequency`, cft2_difficulty_seeing_with_glasses, etc.).  
 - Only schools with codes starting with `KPS`, `KJSS`, or `KSSS` are included.  
 - Schools with codes starting with `KECE` are **ignored**.  
 

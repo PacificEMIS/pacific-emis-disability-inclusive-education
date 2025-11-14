@@ -1,31 +1,269 @@
-<h2>New Student</h2>
+{% extends "base.html" %}
+{% load form_extras cft_display %}
+{% block title %}Record new disability{% endblock %}
 
-{% if messages %}
-  <ul>
-    {% for m in messages %}
-      <li>{{ m }}</li>
-    {% endfor %}
-  </ul>
-{% endif %}
+{% block content %}
 
-<form method="post">
-  {% csrf_token %}
-  <label>First name: <input type="text" name="first_name"></label><br>
-  <label>Last name: <input type="text" name="last_name"></label><br>
-  <label>Date of birth: <input type="date" name="date_of_birth"></label><br>
-  <label>Class level:
-    <select name="class_level_code">
-      {% for lvl in class_levels %}
-        <option value="{{ lvl.code }}">{{ lvl.label }}</option>
-      {% endfor %}
-    </select>
-  </label><br>
-  <label>School:
-    <select name="emis_school_no">
-      {% for a in assignments %}
-        <option value="{{ a.emis_school_no }}">{{ a.emis_school_name }}</option>
-      {% endfor %}
-    </select>
-  </label><br>
-  <button type="submit">Save</button>
-</form>
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+  <div>
+    <h1 class="h4 mb-0">Record new disability</h1>
+    <div class="small text-body-secondary">
+      Create a student and record their disability information for a specific school, year, and class level.
+    </div>
+  </div>
+  <div>
+    <a href="{% url 'inclusive_ed:student_list' %}" class="btn btn-sm btn-outline-secondary">
+      &larr; Back to students
+    </a>
+  </div>
+</div>
+
+<div class="card shadow-sm mb-3">
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+
+      <div class="row g-3">
+        <!-- Student core -->
+        <div class="col-12 col-lg-6">
+          <h2 class="h6 mb-2">Student details</h2>
+
+          <div class="row g-2">
+            <div class="col-12 col-md-6">
+              <label for="{{ form.first_name.id_for_label }}" class="form-label form-label-sm mb-1">
+                First name
+              </label>
+              {{ form.first_name }}
+              {% if form.first_name.errors %}
+                <div class="invalid-feedback d-block">
+                  {{ form.first_name.errors|striptags }}
+                </div>
+              {% endif %}
+            </div>
+
+            <div class="col-12 col-md-6">
+              <label for="{{ form.last_name.id_for_label }}" class="form-label form-label-sm mb-1">
+                Last name
+              </label>
+              {{ form.last_name }}
+              {% if form.last_name.errors %}
+                <div class="invalid-feedback d-block">
+                  {{ form.last_name.errors|striptags }}
+                </div>
+              {% endif %}
+            </div>
+
+            <div class="col-12 col-md-6">
+              <label for="{{ form.date_of_birth.id_for_label }}" class="form-label form-label-sm mb-1">
+                Date of birth
+              </label>
+              {{ form.date_of_birth }}
+              {% if form.date_of_birth.errors %}
+                <div class="invalid-feedback d-block">
+                  {{ form.date_of_birth.errors|striptags }}
+                </div>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Possible matches -->
+          <div id="student-matches" class="mt-3 d-none">
+            <div class="alert alert-warning p-2 small mb-0">
+              <div class="fw-semibold mb-1">
+                Possible existing students found
+              </div>
+              <p class="mb-2">
+                These students look similar to the one you are entering. Please check if one of them
+                is the same student before creating a new record. If the same record, you should browse
+                to that student's record and update that rather than creating new record.
+              </p>
+              <ul class="list-unstyled mb-0" id="student-matches-list"></ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Enrolment core -->
+        <div class="col-12 col-lg-6">
+          <h2 class="h6 mb-2">Enrolment context</h2>
+
+          <div class="row g-2">
+            <div class="col-12">
+              <label for="{{ form.school.id_for_label }}" class="form-label form-label-sm mb-1">
+                School
+              </label>
+              {{ form.school }}
+              {% if form.school.errors %}
+                <div class="invalid-feedback d-block">
+                  {{ form.school.errors|striptags }}
+                </div>
+              {% endif %}
+            </div>
+
+            <div class="col-6">
+              <label for="{{ form.school_year.id_for_label }}" class="form-label form-label-sm mb-1">
+                School year
+              </label>
+              {{ form.school_year }}
+              {% if form.school_year.errors %}
+                <div class="invalid-feedback d-block">
+                  {{ form.school_year.errors|striptags }}
+                </div>
+              {% endif %}
+            </div>
+
+            <div class="col-6">
+              <label for="{{ form.class_level.id_for_label }}" class="form-label form-label-sm mb-1">
+                Class level
+              </label>
+              {{ form.class_level }}
+              {% if form.class_level.errors %}
+                <div class="invalid-feedback d-block">
+                  {{ form.class_level.errors|striptags }}
+                </div>
+              {% endif %}
+            </div>
+          </div>
+
+          <p class="small text-body-secondary mt-2 mb-0">
+            We (optionally) support tracking changing disability data over time. 
+            That is why we record basic details about the student's enrolment.
+          </p>
+        </div>
+      </div>
+
+      <hr class="my-3">
+
+      <!-- Disability & questionnaire -->
+      <h2 class="h6 mb-2">Disability questionnaire</h2>
+      <p class="small text-body-secondary">
+        Record the responses for each of the 20 child functioning questions.
+      </p>
+
+      <div class="row g-3">
+        {% for field_name, code, question_text, choices in cft_meta %}
+          {% with field=form|form_field:field_name %}
+            {% if field %}
+              <div class="col-12 col-md-6 col-xl-4">
+                <label for="{{ field.id_for_label }}" class="form-label form-label-sm mb-1">
+                  {{ code }}. {{ question_text }}
+                </label>
+                {{ field }}
+                {% if field.errors %}
+                  <div class="invalid-feedback d-block">
+                    {{ field.errors|striptags }}
+                  </div>
+                {% endif %}
+              </div>
+            {% endif %}
+          {% endwith %}
+        {% endfor %}
+      </div>
+
+      <div class="mt-4 d-flex justify-content-between">
+        <a href="{% url 'inclusive_ed:student_list' %}" class="btn btn-sm btn-outline-secondary">
+          Cancel
+        </a>
+        <button type="submit" class="btn btn-sm btn-primary">
+          Save disability record
+        </button>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+<script>
+(function() {
+  const firstNameInput = document.getElementById("{{ form.first_name.id_for_label }}");
+  const lastNameInput = document.getElementById("{{ form.last_name.id_for_label }}");
+  const dobInput = document.getElementById("{{ form.date_of_birth.id_for_label }}");
+
+  const matchesBox = document.getElementById("student-matches");
+  const matchesList = document.getElementById("student-matches-list");
+
+  if (!firstNameInput || !lastNameInput || !matchesBox || !matchesList) {
+    return;
+  }
+
+  let debounceTimer = null;
+
+  function fetchMatches() {
+    const firstName = firstNameInput.value.trim();
+    const lastName = lastNameInput.value.trim();
+    const dob = dobInput ? dobInput.value.trim() : "";
+
+    // Only start suggesting if we have at least a minimal signal
+    if (lastName.length < 2 && firstName.length < 2) {
+      matchesBox.classList.add("d-none");
+      matchesList.innerHTML = "";
+      return;
+    }
+
+    const params = new URLSearchParams();
+    if (firstName) params.append("first_name", firstName);
+    if (lastName) params.append("last_name", lastName);
+    if (dob) params.append("date_of_birth", dob);
+
+    fetch("{% url 'inclusive_ed:student_matches' %}?" + params.toString(), {
+      headers: {
+        "X-Requested-With": "XMLHttpRequest"
+      }
+    })
+    .then(resp => resp.json())
+    .then(data => {
+      const results = data.results || [];
+      if (!results.length) {
+        matchesBox.classList.add("d-none");
+        matchesList.innerHTML = "";
+        return;
+      }
+
+      matchesList.innerHTML = "";
+      results.forEach(s => {
+        const li = document.createElement("li");
+        li.className = "mb-1";
+
+        const link = document.createElement("a");
+        link.href = "{% url 'inclusive_ed:student_detail' 0 %}".replace("/0/", "/" + s.id + "/");
+        link.className = "text-decoration-none";
+
+        const name = document.createElement("strong");
+        name.textContent = s.first_name + " " + s.last_name;
+
+        const meta = document.createElement("span");
+        meta.className = "text-body-secondary ms-1";
+        const pieces = [];
+        if (s.date_of_birth) pieces.push("DOB: " + s.date_of_birth);
+        if (s.current_schools) pieces.push("School(s): " + s.current_schools);
+        meta.textContent = pieces.join(" · ");
+
+        link.appendChild(name);
+        link.appendChild(meta);
+
+        li.appendChild(link);
+        matchesList.appendChild(li);
+      });
+
+      matchesBox.classList.remove("d-none");
+    })
+    .catch(() => {
+      // silently ignore errors; this is just a helper
+    });
+  }
+
+  function scheduleFetch() {
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
+    debounceTimer = setTimeout(fetchMatches, 400);
+  }
+
+  firstNameInput.addEventListener("input", scheduleFetch);
+  lastNameInput.addEventListener("input", scheduleFetch);
+  if (dobInput) {
+    dobInput.addEventListener("change", scheduleFetch);
+  }
+})();
+</script>
+
+{% endblock %}

@@ -4,14 +4,20 @@ from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db import IntegrityError, transaction
 from django.db.models import Q, OuterRef, Subquery, F
+from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.core.paginator import Paginator
 from django.urls import reverse
 
+from rapidfuzz import fuzz
+
 from accounts.models import Staff, StaffSchoolMembership
-from integrations.models import EmisClassLevel, EmisSchool, EmisWarehouseYear
 from inclusive_ed.models import Student, StudentSchoolEnrolment
+from inclusive_ed.forms import StudentDisabilityIntakeForm
+from inclusive_ed.cft_meta import CFT_QUESTION_META
+from integrations.models import EmisClassLevel, EmisSchool, EmisWarehouseYear
 
 PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
 
@@ -47,19 +53,28 @@ def dashboard(request):
     active_schools = EmisSchool.objects.filter(active=True).count()
 
     # Schools with at least one enrolment carrying disability-related data
+    # (any of the 20 CFT fields has a recorded value)
     disability_q = (
-        Q(seeing_flag=True)
-        | Q(hearing_flag=True)
-        | Q(mobility_flag=True)
-        | Q(fine_motor_flag=True)
-        | Q(speech_flag=True)
-        | Q(learning_flag=True)
-        | Q(memory_flag=True)
-        | Q(attention_flag=True)
-        | Q(behaviour_flag=True)
-        | Q(social_flag=True)
-        | Q(anxiety_freq__isnull=False)
-        | Q(depression_freq__isnull=False)
+        Q(cft1_wears_glasses__isnull=False)
+        | Q(cft2_difficulty_seeing_with_glasses__isnull=False)
+        | Q(cft3_difficulty_seeing__isnull=False)
+        | Q(cft4_has_hearing_aids__isnull=False)
+        | Q(cft5_difficulty_hearing_with_aids__isnull=False)
+        | Q(cft6_difficulty_hearing__isnull=False)
+        | Q(cft7_uses_walking_equipment__isnull=False)
+        | Q(cft8_difficulty_walking_without_equipment__isnull=False)
+        | Q(cft9_difficulty_walking_with_equipment__isnull=False)
+        | Q(cft10_difficulty_walking_compare_to_others__isnull=False)
+        | Q(cft11_difficulty_picking_up_small_objects__isnull=False)
+        | Q(cft12_difficulty_being_understood__isnull=False)
+        | Q(cft13_difficulty_learning__isnull=False)
+        | Q(cft14_difficulty_remembering__isnull=False)
+        | Q(cft15_difficulty_concentrating__isnull=False)
+        | Q(cft16_difficulty_accepting_change__isnull=False)
+        | Q(cft17_difficulty_controlling_behaviour__isnull=False)
+        | Q(cft18_difficulty_making_friends__isnull=False)
+        | Q(cft19_anxious_frequency__isnull=False)
+        | Q(cft20_depressed_frequency__isnull=False)
     )
 
     schools_with_disability_data = (
@@ -360,50 +375,163 @@ def student_detail(request, pk):
     }
     return render(request, "inclusive_ed/student_detail.html", context)
 
-
 @login_required
 def student_new(request):
-    assignments = (EmisSchool.objects
-                   .filter(active=True)
-                   .only("emis_school_no", "emis_school_name")
-                   .order_by("emis_school_name"))
-
-    class_levels = EmisClassLevel.objects.filter(active=True).order_by("code")
-
     if request.method == "POST":
-        data = request.POST
-        first_name = (data.get("first_name") or "").strip()
-        last_name = (data.get("last_name") or "").strip()
-        dob_raw = data.get("date_of_birth") or ""
-        class_level_code = data.get("class_level_code") or ""
-        school_no = (data.get("emis_school_no") or "").strip()
+        form = StudentDisabilityIntakeForm(request.POST)
+        if form.is_valid():
+            cd = form.cleaned_data
+            cft_data = form.get_cft_cleaned_data()
 
-        errs = []
-        if not first_name: errs.append("First name is required.")
-        if not last_name: errs.append("Last name is required.")
-        if not dob_raw: errs.append("Date of birth is required.")
-        if not class_level_code: errs.append("Class level is required.")
-        if not school_no: errs.append("School is required.")
+            try:
+                with transaction.atomic():
+                    # --- Create Student ---
+                    student = Student.objects.create(
+                        first_name=cd["first_name"].strip(),
+                        last_name=cd["last_name"].strip(),
+                        date_of_birth=cd["date_of_birth"],
+                        created_by=request.user,
+                        last_updated_by=request.user,
+                    )
 
-        date_of_birth = parse_date(dob_raw) if dob_raw else None
-        if dob_raw and not date_of_birth:
-            errs.append("Date of birth is invalid (use YYYY-MM-DD).")
+                    # --- Create Enrolment with all 20 CFT fields ---
+                    enrol_kwargs = {
+                        "student": student,
+                        "school": cd["school"],
+                        "school_year": cd["school_year"],
+                        "class_level": cd["class_level"],
+                        "created_by": request.user,
+                        "last_updated_by": request.user,
+                    }
 
-        if errs:
-            for e in errs: messages.error(request, e)
-            return render(request, "inclusive_ed/student_new.html",
-                          {"class_levels": class_levels, "assignments": assignments}, status=400)
+                    # Inject all cft1..cft20 values
+                    enrol_kwargs.update(cft_data)
 
-        Student.objects.create(
-            first_name=first_name,
-            last_name=last_name,
-            date_of_birth=date_of_birth,
-            class_level_code=class_level_code,
-            emis_school_no=school_no,  # if IntegerField, cast to int
-            created_by=request.user,
+                    StudentSchoolEnrolment.objects.create(**enrol_kwargs)
+
+            except IntegrityError:
+                messages.error(
+                    request,
+                    "A similar enrolment already exists for that school and school year.",
+                )
+                return render(
+                    request,
+                    "inclusive_ed/student_new.html",
+                    {
+                        "form": form,
+                        "cft_meta": CFT_QUESTION_META,
+                    },
+                    status=400,
+                )
+
+            messages.success(request, "Disability record created.")
+            return redirect("inclusive_ed:student_detail", pk=student.pk)
+
+    else:
+        form = StudentDisabilityIntakeForm()
+
+    return render(
+        request,
+        "inclusive_ed/student_new.html",
+        {
+            "form": form,
+            "cft_meta": CFT_QUESTION_META,
+        },
+    )
+
+def _name_similarity(a: str, b: str) -> float:
+    """
+    Use rapidfuzz.partial_ratio for robust fuzzy matching and
+    normalise to a 0–1 similarity score.
+    """
+    a = (a or "").strip()
+    b = (b or "").strip()
+    if not a or not b:
+        return 0.0
+    # partial_ratio is good for "Jon" vs "Jonathan"
+    return fuzz.partial_ratio(a, b) / 100.0
+
+@login_required
+def student_matches(request):
+    """
+    Lightweight JSON endpoint to suggest existing students that might match
+    the student being entered.
+
+    - Uses rapidfuzz-based similarity on first and last name.
+    - If date_of_birth is provided, it must match exactly.
+    """
+    first_name_q = (request.GET.get("first_name") or "").strip()
+    last_name_q = (request.GET.get("last_name") or "").strip()
+    dob_raw = (request.GET.get("date_of_birth") or "").strip()
+
+    qs = Student.objects.all()
+
+    # If DOB is provided, use it as a hard filter (very strong signal)
+    date_of_birth = parse_date(dob_raw) if dob_raw else None
+    if date_of_birth:
+        qs = qs.filter(date_of_birth=date_of_birth)
+
+    # Coarse filter to avoid scanning the whole table:
+    # use first character of names (if provided) as a prefix filter.
+    if last_name_q:
+        qs = qs.filter(last_name__istartswith=last_name_q[0])
+    if first_name_q:
+        qs = qs.filter(first_name__istartswith=first_name_q[0])
+
+    # Reasonable upper bound before fuzzy scoring
+    candidates = list(qs.order_by("last_name", "first_name")[:200])
+
+    results_scored = []
+
+    for s in candidates:
+        # Compute similarity for each part (if query provided)
+        if last_name_q:
+            last_sim = _name_similarity(last_name_q, s.last_name)
+        else:
+            last_sim = 0.0
+
+        if first_name_q:
+            first_sim = _name_similarity(first_name_q, s.first_name)
+        else:
+            first_sim = 0.0
+
+        # Combine: give more weight to last name
+        if first_name_q and last_name_q:
+            score = 0.6 * last_sim + 0.4 * first_sim
+        elif last_name_q:
+            score = last_sim
+        elif first_name_q:
+            score = first_sim
+        else:
+            score = 0.0
+
+        results_scored.append((score, s))
+
+    # Filter out very weak matches
+    MIN_SCORE = 0.8  # adjust as you like
+    results_scored = [item for item in results_scored if item[0] >= MIN_SCORE]
+
+    # Sort by best score first, then by name
+    results_scored.sort(
+        key=lambda x: (-x[0], x[1].last_name.lower(), x[1].first_name.lower())
+    )
+
+    # Limit to top 10 matches
+    results_scored = results_scored[:10]
+
+    results = []
+    for score, s in results_scored:
+        results.append(
+            {
+                "id": s.id,
+                "first_name": s.first_name,
+                "last_name": s.last_name,
+                "date_of_birth": s.date_of_birth.isoformat()
+                if s.date_of_birth
+                else None,
+                "current_schools": s.current_school_names,
+                "similarity": round(score, 2),  # handy for debugging/UX tweaks
+            }
         )
-        messages.success(request, "Student created.")
-        return redirect("inclusive_ed:dashboard")
 
-    return render(request, "inclusive_ed/student_new.html",
-                  {"class_levels": class_levels, "assignments": assignments})
+    return JsonResponse({"results": results})
