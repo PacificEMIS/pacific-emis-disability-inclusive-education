@@ -48,10 +48,27 @@
 
           <!-- Logged-in user badge -->
           <div class="nav-item text-nowrap me-2">
-            <span class="navbar-text text-light small d-flex align-items-center">
-              <i class="bi bi-person-circle me-1"></i>
-              {{ request.user.get_full_name|default:request.user.username }} ({{ request.user.email }})
-            </span>
+            {% if request.user.is_authenticated %}
+              {% if staff_pk_for_request_user %}
+                <a href="{% url 'accounts:staff_detail' staff_pk_for_request_user %}"
+                  class="navbar-text text-light small d-flex align-items-center text-decoration-none"
+                  title="View your staff profile">
+                  <i class="bi bi-person-circle me-1"></i>
+                  {{ request.user.get_full_name|default:request.user.username }}
+                  {% if request.user.email %}
+                    ({{ request.user.email }})
+                  {% endif %}
+                </a>
+              {% else %}
+                <span class="navbar-text text-light small d-flex align-items-center">
+                  <i class="bi bi-person-circle me-1"></i>
+                  {{ request.user.get_full_name|default:request.user.username }}
+                  {% if request.user.email %}
+                    ({{ request.user.email }})
+                  {% endif %}
+                </span>
+              {% endif %}
+            {% endif %}
           </div>
 
           <!-- Sign out -->

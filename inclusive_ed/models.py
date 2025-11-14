@@ -133,6 +133,8 @@ class PermissionsAnchor(models.Model):
     class Meta:
         managed = False
         default_permissions = ()
+        verbose_name = "Disability-Inclusive Education app"
+        verbose_name_plural = "Disability-Inclusive Education app"
         permissions = (
             ("access_inclusive_ed", "Can access the Disability-Inclusive Education app"),
         )
