@@ -1,4 +1,6 @@
 {% extends "base.html" %}
+{% load cft_display %}
+
 {% block title %}Student — {{ student.last_name }}, {{ student.first_name }}{% endblock %}
 
 {% block content %}
@@ -66,7 +68,7 @@
             {{ student.created_at|date:"Y-m-d" }}
             {% if student.created_by %}
               <span class="text-body-secondary">
-                · by {{ student.created_by.get_full_name|default:student.created_by.username }}
+                · by {{ student.created_by.full_name|default:student.created_by.username }}
               </span>
             {% endif %}
           </dd>
@@ -76,7 +78,7 @@
             {{ student.last_updated_at|date:"Y-m-d" }}
             {% if student.last_updated_by %}
               <span class="text-body-secondary">
-                · by {{ student.last_updated_by.get_full_name|default:student.last_updated_by.username }}
+                · by {{ student.last_updated_by.full_name|default:student.last_updated_by.username }}
               </span>
             {% endif %}
           </dd>
@@ -160,7 +162,7 @@
                           Created {{ e.created_at|date:"Y-m-d" }}
                           {% if e.created_by %}
                             <span>
-                              · by {{ e.created_by.get_full_name|default:e.created_by.username }}
+                              · by {{ e.created_by.full_name|default:e.created_by.username }}
                             </span>
                           {% endif %}
                         </div>
@@ -171,7 +173,7 @@
                           Updated {{ e.last_updated_at|date:"Y-m-d" }}
                           {% if e.last_updated_by %}
                             <span>
-                              · by {{ e.last_updated_by.get_full_name|default:e.last_updated_by.username }}
+                              · by {{ e.last_updated_by.full_name|default:e.last_updated_by.username }}
                             </span>
                           {% endif %}
                         </div>
@@ -209,58 +211,105 @@
         {% if latest_enrolment %}
           <div class="row">
             <div class="col-12 col-md-6">
-              <h3 class="h6">Functioning / participation</h3>
+              <h3 class="h6">Seeing &amp; hearing</h3>
+              <dl class="row mb-3">
+                <dt class="col-6">Wears glasses / contacts</dt>
+                <dd class="col-6">
+                  {% if latest_enrolment.cft1_wears_glasses is not None %}
+                    {{ latest_enrolment.cft1_wears_glasses|cft_yesno_badge|safe }}
+                  {% else %}
+                    <span class="text-body-secondary">Not recorded</span>
+                  {% endif %}
+                </dd>
+
+                <dt class="col-6">Difficulty seeing with glasses</dt>
+                <dd class="col-6">
+                  {% if latest_enrolment.cft2_difficulty_seeing_with_glasses is not None %}
+                    {{ latest_enrolment.cft2_difficulty_seeing_with_glasses|cft_difficulty_badge|safe }}
+                  {% else %}
+                    <span class="text-body-secondary">Not recorded</span>
+                  {% endif %}
+                </dd>
+
+                <dt class="col-6">Difficulty seeing (overall)</dt>
+                <dd class="col-6">
+                  {% if latest_enrolment.cft3_difficulty_seeing is not None %}
+                    {{ latest_enrolment.cft3_difficulty_seeing|cft_difficulty_badge|safe }}
+                  {% else %}
+                    <span class="text-body-secondary">Not recorded</span>
+                  {% endif %}
+                </dd>
+
+                <dt class="col-6">Uses hearing aid</dt>
+                <dd class="col-6">
+                  {% if latest_enrolment.cft4_has_hearing_aids is not None %}
+                    {{ latest_enrolment.cft4_has_hearing_aids|cft_difficulty_badge|safe }}
+                  {% else %}
+                    <span class="text-body-secondary">Not recorded</span>
+                  {% endif %}
+                </dd>
+
+                <dt class="col-6">Difficulty hearing with aid</dt>
+                <dd class="col-6">
+                  {% if latest_enrolment.cft5_difficulty_hearing_with_aids is not None %}
+                    {{ latest_enrolment.cft5_difficulty_hearing_with_aids|cft_difficulty_badge|safe }}
+                  {% else %}
+                    <span class="text-body-secondary">Not recorded</span>
+                  {% endif %}
+                </dd>
+
+                <dt class="col-6">Difficulty hearing (overall)</dt>
+                <dd class="col-6">
+                  {% if latest_enrolment.cft6_difficulty_hearing is not None %}
+                    {{ latest_enrolment.cft6_difficulty_hearing|cft_difficulty_badge|safe }}
+                  {% else %}
+                    <span class="text-body-secondary">Not recorded</span>
+                  {% endif %}
+                </dd>
+              </dl>
+
+              <h3 class="h6">Mobility &amp; fine motor</h3>
               <dl class="row mb-0">
-                <dt class="col-6">Seeing</dt>
+                <dt class="col-6">Uses walking equipment / assistance</dt>
                 <dd class="col-6">
-                  {% if latest_enrolment.seeing_flag is True %}
-                    <span class="badge text-bg-danger">Flagged</span>
-                  {% elif latest_enrolment.seeing_flag is False %}
-                    <span class="badge text-bg-success">No difficulty</span>
+                  {% if latest_enrolment.cft7_uses_walking_equipment is not None %}
+                    {{ latest_enrolment.cft7_uses_walking_equipment|cft_difficulty_badge|safe }}
                   {% else %}
                     <span class="text-body-secondary">Not recorded</span>
                   {% endif %}
                 </dd>
 
-                <dt class="col-6">Hearing</dt>
+                <dt class="col-6">Difficulty walking without equipment</dt>
                 <dd class="col-6">
-                  {% if latest_enrolment.hearing_flag is True %}
-                    <span class="badge text-bg-danger">Flagged</span>
-                  {% elif latest_enrolment.hearing_flag is False %}
-                    <span class="badge text-bg-success">No difficulty</span>
+                  {% if latest_enrolment.cft8_difficulty_walking_without_equipment is not None %}
+                    {{ latest_enrolment.cft8_difficulty_walking_without_equipment|cft_difficulty_badge|safe }}
                   {% else %}
                     <span class="text-body-secondary">Not recorded</span>
                   {% endif %}
                 </dd>
 
-                <dt class="col-6">Mobility</dt>
+                <dt class="col-6">Difficulty walking with equipment</dt>
                 <dd class="col-6">
-                  {% if latest_enrolment.mobility_flag is True %}
-                    <span class="badge text-bg-danger">Flagged</span>
-                  {% elif latest_enrolment.mobility_flag is False %}
-                    <span class="badge text-bg-success">No difficulty</span>
+                  {% if latest_enrolment.cft9_difficulty_walking_with_equipment is not None %}
+                    {{ latest_enrolment.cft9_difficulty_walking_with_equipment|cft_difficulty_badge|safe }}
                   {% else %}
                     <span class="text-body-secondary">Not recorded</span>
                   {% endif %}
                 </dd>
 
-                <dt class="col-6">Fine motor</dt>
+                <dt class="col-6">Difficulty walking vs same-age peers</dt>
                 <dd class="col-6">
-                  {% if latest_enrolment.fine_motor_flag is True %}
-                    <span class="badge text-bg-danger">Flagged</span>
-                  {% elif latest_enrolment.fine_motor_flag is False %}
-                    <span class="badge text-bg-success">No difficulty</span>
+                  {% if latest_enrolment.cft10_difficulty_walking_compare_to_others is not None %}
+                    {{ latest_enrolment.cft10_difficulty_walking_compare_to_others|cft_difficulty_badge|safe }}
                   {% else %}
                     <span class="text-body-secondary">Not recorded</span>
                   {% endif %}
                 </dd>
 
-                <dt class="col-6">Speech</dt>
+                <dt class="col-6">Picking up small objects</dt>
                 <dd class="col-6">
-                  {% if latest_enrolment.speech_flag is True %}
-                    <span class="badge text-bg-danger">Flagged</span>
-                  {% elif latest_enrolment.speech_flag is False %}
-                    <span class="badge text-bg-success">No difficulty</span>
+                  {% if latest_enrolment.cft11_difficulty_picking_up_small_objects is not None %}
+                    {{ latest_enrolment.cft11_difficulty_picking_up_small_objects|cft_difficulty_badge|safe }}
                   {% else %}
                     <span class="text-body-secondary">Not recorded</span>
                   {% endif %}
@@ -269,76 +318,87 @@
             </div>
 
             <div class="col-12 col-md-6">
-              <h3 class="h6">Learning / behaviour / emotional</h3>
-              <dl class="row mb-0">
+              <h3 class="h6">Communication &amp; learning</h3>
+              <dl class="row mb-3">
+                <dt class="col-6">Being understood by others</dt>
+                <dd class="col-6">
+                  {% if latest_enrolment.cft12_difficulty_being_understood is not None %}
+                    {{ latest_enrolment.cft12_difficulty_being_understood|cft_difficulty_badge|safe }}
+                  {% else %}
+                    <span class="text-body-secondary">Not recorded</span>
+                  {% endif %}
+                </dd>
+
                 <dt class="col-6">Learning</dt>
                 <dd class="col-6">
-                  {% if latest_enrolment.learning_flag is True %}
-                    <span class="badge text-bg-danger">Flagged</span>
-                  {% elif latest_enrolment.learning_flag is False %}
-                    <span class="badge text-bg-success">No difficulty</span>
+                  {% if latest_enrolment.cft13_difficulty_learning is not None %}
+                    {{ latest_enrolment.cft13_difficulty_learning|cft_difficulty_badge|safe }}
                   {% else %}
                     <span class="text-body-secondary">Not recorded</span>
                   {% endif %}
                 </dd>
 
-                <dt class="col-6">Memory</dt>
+                <dt class="col-6">Remembering</dt>
                 <dd class="col-6">
-                  {% if latest_enrolment.memory_flag is True %}
-                    <span class="badge text-bg-danger">Flagged</span>
-                  {% elif latest_enrolment.memory_flag is False %}
-                    <span class="badge text-bg-success">No difficulty</span>
+                  {% if latest_enrolment.cft14_difficulty_remembering is not None %}
+                    {{ latest_enrolment.cft14_difficulty_remembering|cft_difficulty_badge|safe }}
                   {% else %}
                     <span class="text-body-secondary">Not recorded</span>
                   {% endif %}
                 </dd>
 
-                <dt class="col-6">Attention</dt>
+                <dt class="col-6">Concentrating</dt>
                 <dd class="col-6">
-                  {% if latest_enrolment.attention_flag is True %}
-                    <span class="badge text-bg-danger">Flagged</span>
-                  {% elif latest_enrolment.attention_flag is False %}
-                    <span class="badge text-bg-success">No difficulty</span>
+                  {% if latest_enrolment.cft15_difficulty_concentrating is not None %}
+                    {{ latest_enrolment.cft15_difficulty_concentrating|cft_difficulty_badge|safe }}
                   {% else %}
                     <span class="text-body-secondary">Not recorded</span>
                   {% endif %}
                 </dd>
 
-                <dt class="col-6">Behaviour</dt>
+                <dt class="col-6">Accepting change in routine</dt>
                 <dd class="col-6">
-                  {% if latest_enrolment.behaviour_flag is True %}
-                    <span class="badge text-bg-danger">Flagged</span>
-                  {% elif latest_enrolment.behaviour_flag is False %}
-                    <span class="badge text-bg-success">No difficulty</span>
+                  {% if latest_enrolment.cft16_difficulty_accepting_change is not None %}
+                    {{ latest_enrolment.cft16_difficulty_accepting_change|cft_difficulty_badge|safe }}
+                  {% else %}
+                    <span class="text-body-secondary">Not recorded</span>
+                  {% endif %}
+                </dd>
+              </dl>
+
+              <h3 class="h6">Behaviour, social &amp; emotional</h3>
+              <dl class="row mb-0">
+                <dt class="col-6">Controlling behaviour</dt>
+                <dd class="col-6">
+                  {% if latest_enrolment.cft17_difficulty_controlling_behaviour is not None %}
+                    {{ latest_enrolment.cft17_difficulty_controlling_behaviour|cft_difficulty_badge|safe }}
                   {% else %}
                     <span class="text-body-secondary">Not recorded</span>
                   {% endif %}
                 </dd>
 
-                <dt class="col-6">Social</dt>
+                <dt class="col-6">Making friends</dt>
                 <dd class="col-6">
-                  {% if latest_enrolment.social_flag is True %}
-                    <span class="badge text-bg-danger">Flagged</span>
-                  {% elif latest_enrolment.social_flag is False %}
-                    <span class="badge text-bg-success">No difficulty</span>
+                  {% if latest_enrolment.cft18_difficulty_making_friends is not None %}
+                    {{ latest_enrolment.cft18_difficulty_making_friends|cft_difficulty_badge|safe }}
                   {% else %}
                     <span class="text-body-secondary">Not recorded</span>
                   {% endif %}
                 </dd>
 
-                <dt class="col-6">Anxiety (freq)</dt>
+                <dt class="col-6">Anxiety (frequency)</dt>
                 <dd class="col-6">
-                  {% if latest_enrolment.anxiety_freq is not None %}
-                    {{ latest_enrolment.anxiety_freq }}
+                  {% if latest_enrolment.cft19_anxious_frequency is not None %}
+                    {{ latest_enrolment.cft19_anxious_frequency|cft_emotional_badge|safe }}
                   {% else %}
                     <span class="text-body-secondary">Not recorded</span>
                   {% endif %}
                 </dd>
 
-                <dt class="col-6">Depression (freq)</dt>
+                <dt class="col-6">Depression (frequency)</dt>
                 <dd class="col-6">
-                  {% if latest_enrolment.depression_freq is not None %}
-                    {{ latest_enrolment.depression_freq }}
+                  {% if latest_enrolment.cft20_depressed_frequency is not None %}
+                    {{ latest_enrolment.cft20_depressed_frequency|cft_emotional_badge|safe }}
                   {% else %}
                     <span class="text-body-secondary">Not recorded</span>
                   {% endif %}
