@@ -8,6 +8,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import Q, OuterRef, Subquery, F
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
+from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.urls import reverse
 
@@ -15,7 +16,7 @@ from rapidfuzz import fuzz
 
 from accounts.models import Staff, StaffSchoolMembership
 from inclusive_ed.models import Student, StudentSchoolEnrolment
-from inclusive_ed.forms import StudentDisabilityIntakeForm
+from inclusive_ed.forms import StudentCoreForm, StudentDisabilityIntakeForm, StudentEnrolmentForm
 from inclusive_ed.cft_meta import CFT_QUESTION_META
 from integrations.models import EmisClassLevel, EmisSchool, EmisWarehouseYear
 
@@ -376,6 +377,31 @@ def student_detail(request, pk):
     return render(request, "inclusive_ed/student_detail.html", context)
 
 @login_required
+def student_edit(request, pk):
+    student = get_object_or_404(Student, pk=pk)
+
+    if not user_can_manage_inclusive_ed(request.user):
+        raise PermissionDenied
+
+    if request.method == "POST":
+        form = StudentCoreForm(request.POST, instance=student)
+        if form.is_valid():
+            obj = form.save(commit=False)
+            obj.last_updated_by = request.user
+            obj.save()
+            messages.success(request, "Student profile updated.")
+            return redirect("inclusive_ed:student_detail", pk=student.pk)
+    else:
+        form = StudentCoreForm(instance=student)
+
+    context = {
+        "student": student,
+        "form": form,
+    }
+    return render(request, "inclusive_ed/student_edit.html", context)
+
+
+@login_required
 def student_new(request):
     if request.method == "POST":
         form = StudentDisabilityIntakeForm(request.POST)
@@ -535,3 +561,95 @@ def student_matches(request):
         )
 
     return JsonResponse({"results": results})
+
+def user_can_manage_inclusive_ed(user):
+    # keep this simple & consistent; adjust if you later add finer-grained perms
+    return user.is_superuser or user.has_perm("inclusive_ed.access_inclusive_ed")
+
+@login_required
+def student_enrolment_add(request, student_pk):
+    student = get_object_or_404(Student, pk=student_pk)
+
+    if not user_can_manage_inclusive_ed(request.user):
+        raise PermissionDenied
+
+    if request.method == "POST":
+        form = StudentEnrolmentForm(request.POST)
+        if form.is_valid():
+            enrol = form.save(commit=False)
+            enrol.student = student
+            enrol.created_by = request.user
+            enrol.last_updated_by = request.user
+            enrol.save()
+            messages.success(request, "Student enrolment / disability data added.")
+            return redirect("inclusive_ed:student_detail", pk=student.pk)
+    else:
+        form = StudentEnrolmentForm()
+
+    return render(
+        request,
+        "inclusive_ed/student_enrolment_edit.html",
+        {
+            "student": student,
+            "enrolment": None,
+            "form": form,
+            "is_create": True,
+            "cft_meta": CFT_QUESTION_META,
+        },
+    )
+
+@login_required
+def student_enrolment_edit(request, student_pk, enrolment_pk):
+    student = get_object_or_404(Student, pk=student_pk)
+    enrolment = get_object_or_404(StudentSchoolEnrolment, pk=enrolment_pk, student=student)
+
+    if not user_can_manage_inclusive_ed(request.user):
+        raise PermissionDenied
+
+    if request.method == "POST":
+        form = StudentEnrolmentForm(request.POST, instance=enrolment)
+        if form.is_valid():
+            enrol = form.save(commit=False)
+            enrol.last_updated_by = request.user
+            enrol.save()
+            messages.success(request, "Student enrolment / disability data updated.")
+            return redirect("inclusive_ed:student_detail", pk=student.pk)
+    else:
+        form = StudentEnrolmentForm(instance=enrolment)
+
+    return render(
+        request,
+        "inclusive_ed/student_enrolment_edit.html",
+        {
+            "student": student,
+            "enrolment": enrolment,
+            "form": form,
+            "is_create": False,
+            "cft_meta": CFT_QUESTION_META,
+        },
+    )
+
+@login_required
+def student_enrolment_delete(request, student_pk, enrolment_pk):
+    student = get_object_or_404(Student, pk=student_pk)
+    enrolment = get_object_or_404(
+        StudentSchoolEnrolment, pk=enrolment_pk, student=student
+    )
+
+    if not user_can_manage_inclusive_ed(request.user):
+        raise PermissionDenied
+
+    if request.method == "POST":
+        enrolment.delete()
+        messages.success(request, "Student enrolment / disability data deleted.")
+        return redirect("inclusive_ed:student_detail", pk=student.pk)
+
+    context = {
+        "student": student,
+        "enrolment": enrolment,
+    }
+    return render(
+        request,
+        "inclusive_ed/student_enrolment_confirm_delete.html",
+        context,
+    )

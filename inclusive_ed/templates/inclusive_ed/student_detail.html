@@ -21,11 +21,11 @@
     <a href="{% url 'inclusive_ed:student_list' %}" class="btn btn-sm btn-outline-secondary">
       &larr; Back to students
     </a>
-    {# Placeholder for future edit permissions #}
-    {% if user.is_superuser %}
-      <button type="button" class="btn btn-sm btn-primary" disabled>
-        Edit (coming soon)
-      </button>
+    {% if user.is_superuser or perms.inclusive_ed.access_inclusive_ed %}
+      <a href="{% url 'inclusive_ed:student_edit' student.pk %}"
+        class="btn btn-sm btn-primary">
+        Edit profile
+      </a>
     {% endif %}
   </div>
 </div>
@@ -91,12 +91,20 @@
   <div class="col-12 col-xl-8">
     <div class="card shadow-sm h-100">
       <div class="card-header d-flex align-items-center justify-content-between">
-        <h2 class="h6 mb-0">School enrolments</h2>
-        <span class="badge text-bg-light text-body-secondary">
-          {{ enrolments|length }} total (usually the year the disability was recorded)
-        </span>
+        <h2 class="h6 mb-0">Enrolments &amp; disability data</h2>
+        <div class="d-flex align-items-center gap-2">
+          <span class="badge text-bg-light text-body-secondary">
+            {{ student.enrolments.count }} total
+          </span>
+          {% if user.is_superuser or perms.inclusive_ed.access_inclusive_ed %}
+            <a href="{% url 'inclusive_ed:student_enrolment_add' student.pk %}"
+               class="btn btn-sm btn-primary">
+               Add Enrolment
+            </a>
+          {% endif %}
+        </div>
       </div>
-
+      
       <div class="card-body p-0">
         {% if enrolments %}
           <div class="table-responsive">
@@ -108,6 +116,9 @@
                   <th scope="col">Class level</th>
                   {% comment %} <th scope="col">Start/End Dates</th> {% endcomment %}
                   <th scope="col" class="text-end">Status &amp; audit</th>
+                  {% if user.is_superuser or perms.inclusive_ed.access_inclusive_ed %}
+                    <th scope="col" class="text-end">Actions</th>
+                  {% endif %}
                 </tr>
               </thead>
               <tbody>
@@ -162,7 +173,7 @@
                           Created {{ e.created_at|date:"Y-m-d" }}
                           {% if e.created_by %}
                             <span>
-                              · by {{ e.created_by.full_name|default:e.created_by.username }}
+                              · by {{ e.created_by.get_full_name|default:e.created_by.username }}
                             </span>
                           {% endif %}
                         </div>
@@ -173,12 +184,24 @@
                           Updated {{ e.last_updated_at|date:"Y-m-d" }}
                           {% if e.last_updated_by %}
                             <span>
-                              · by {{ e.last_updated_by.full_name|default:e.last_updated_by.username }}
+                              · by {{ e.last_updated_by.get_full_name|default:e.last_updated_by.username }}
                             </span>
                           {% endif %}
                         </div>
                       {% endif %}
                     </td>
+                    {% if user.is_superuser or perms.inclusive_ed.access_inclusive_ed %}
+                      <td class="text-end">
+                        <a href="{% url 'inclusive_ed:student_enrolment_edit' student.pk e.pk %}"
+                          class="btn btn-sm btn-outline-secondary me-1">
+                          Edit
+                        </a>
+                        <a href="{% url 'inclusive_ed:student_enrolment_delete' student.pk e.pk %}"
+                          class="btn btn-sm btn-outline-danger">
+                          Delete
+                        </a>
+                      </td>
+                    {% endif %}
                   </tr>
                 {% endfor %}
               </tbody>
@@ -203,7 +226,7 @@
         <h2 class="h6 mb-0">Questionnaire &amp; disability data</h2>
         {% if latest_enrolment %}
           <span class="badge text-bg-light text-body-secondary">
-            Latest data is from enrolment: {{ latest_enrolment.school_year.code }} at {{ latest_enrolment.school.emis_school_name }}
+            Latest data is from enrolment: School Year {{ latest_enrolment.school_year.code }} at {{ latest_enrolment.school.emis_school_name }}
           </span>
         {% endif %}
       </div>
