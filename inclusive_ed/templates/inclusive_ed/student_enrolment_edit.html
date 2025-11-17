@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load form_extras cft_display %}
+{% load form_extras cft_display static %}
 {% block title %}
   {% if is_create %}
     Add enrolment / disability data — {{ student.first_name }} {{ student.last_name }}
@@ -40,8 +40,8 @@
     <form method="post" class="row g-3">
       {% csrf_token %}
 
-      <div class="col-12 col-md-4">
-        <label for="{{ form.school.id_for_label }}" class="form-label form-label-sm">School</label>
+      <div class="col-12 col-md-6">
+        <label for="{{ form.school.id_for_label }}" class="form-label form-label-sm mb-1">School</label>
         {{ form.school }}
         {% if form.school.errors %}
           <div class="invalid-feedback d-block">
@@ -50,7 +50,7 @@
         {% endif %}
       </div>
 
-      <div class="col-6 col-md-4">
+      <div class="col-6 col-md-3">
         <label for="{{ form.school_year.id_for_label }}" class="form-label form-label-sm">School year</label>
         {{ form.school_year }}
         {% if form.school_year.errors %}
@@ -60,7 +60,7 @@
         {% endif %}
       </div>
 
-      <div class="col-6 col-md-4">
+      <div class="col-6 col-md-3">
         <label for="{{ form.class_level.id_for_label }}" class="form-label form-label-sm">Class level</label>
         {{ form.class_level }}
         {% if form.class_level.errors %}
@@ -94,30 +94,81 @@
         <hr>
         <h2 class="h6 mb-2">Disability questionnaire</h2>
         <p class="small text-body-secondary mb-3">
-          Record the responses for each of the 20 child functioning questions.
+          Select any of the below to record a possible disability.
         </p>
-      </div>
 
-      {# Render CFT 1–20 using metadata and the form_extras helper #}
-      <div class="col-12">
         <div class="row g-3">
-          {% for field_name, code, question_text, choices in cft_meta %}
-            {% with field=form|form_field:field_name %}
-              {% if field %}
-                <div class="col-12 col-md-6 col-xl-4">
-                  <label for="{{ field.id_for_label }}" class="form-label form-label-sm mb-1">
-                    {{ code }}. {{ question_text }}
-                  </label>
-                  {{ field }}
-                  {% if field.errors %}
-                    <div class="invalid-feedback d-block">
-                      {{ field.errors|striptags }}
+          <!-- Left: domains (vertical on md+, horizontal on xs) -->
+          <div class="col-12 col-md-3 col-lg-2 mb-2 mb-md-0">
+            <div
+              id="cft-domain-nav"
+              class="nav flex-row flex-md-column nav-pills small gap-1"
+              role="tablist"
+            >
+              <button type="button" class="nav-link cft-domain" data-cft-filter="visual">
+                Visual issue
+              </button>
+              <button type="button" class="nav-link cft-domain" data-cft-filter="hearing">
+                Hearing issue
+              </button>
+              <button type="button" class="nav-link cft-domain" data-cft-filter="physical">
+                Physical issue
+              </button>
+              <button type="button" class="nav-link cft-domain" data-cft-filter="communication">
+                Communication issue
+              </button>
+              <button type="button" class="nav-link cft-domain" data-cft-filter="learning">
+                Learning issue
+              </button>
+              <button type="button" class="nav-link cft-domain" data-cft-filter="behaviour">
+                Behaviour issue (Hyperactive/Autism)
+              </button>
+              <button type="button" class="nav-link cft-domain" data-cft-filter="emotional">
+                Emotional issue
+              </button>
+            </div>
+          </div>
+
+          <!-- Right: questions -->
+          <div class="col-12 col-md-9 col-lg-10">
+            <div class="row g-3" id="cft-questions">
+                {% for field_name, code, question_text, choices in cft_meta %}
+                {% with field=form|form_field:field_name %}
+                    {% if field %}
+                    <div
+                        class="col-12 cft-question"
+                        data-cft-code="{{ code }}"
+                    >
+                        <div class="d-flex align-items-start justify-content-between gap-2">
+
+                        <!-- Label (majority width) -->
+                        <label
+                            for="{{ field.id_for_label }}"
+                            class="form-label form-label-sm mb-0 flex-grow-1 cft-label"
+                            data-cft-original="{{ code }}. {{ question_text }}"
+                            style="max-width: 75%;"
+                        >
+                            {{ code }}. {{ question_text }}
+                        </label>
+
+                        <!-- Dropdown (auto-width) -->
+                        <div class="ms-auto" style="min-width: 180px; max-width: 240px;">
+                            {{ field }}
+                        </div>
+
+                        </div>
+
+                        {% if field.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ field.errors|striptags }}
+                        </div>
+                        {% endif %}
                     </div>
-                  {% endif %}
-                </div>
-              {% endif %}
-            {% endwith %}
-          {% endfor %}
+                    {% endif %}
+                {% endwith %}
+                {% endfor %}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -133,5 +184,7 @@
     </form>
   </div>
 </div>
+
+<script src="{% static 'inclusive_ed/cft_tabs.js' %}"></script>
 
 {% endblock %}

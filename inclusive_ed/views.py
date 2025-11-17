@@ -17,7 +17,7 @@ from rapidfuzz import fuzz
 from accounts.models import Staff, StaffSchoolMembership
 from inclusive_ed.models import Student, StudentSchoolEnrolment
 from inclusive_ed.forms import StudentCoreForm, StudentDisabilityIntakeForm, StudentEnrolmentForm
-from inclusive_ed.cft_meta import CFT_QUESTION_META
+from inclusive_ed.cft_meta import CFT_QUESTION_META, build_cft_meta_for_name
 from integrations.models import EmisClassLevel, EmisSchool, EmisWarehouseYear
 
 PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
@@ -456,12 +456,24 @@ def student_new(request):
     else:
         form = StudentDisabilityIntakeForm()
 
+    # Build a display name from whatever we have in the form
+    raw_first = (form.data.get("first_name") or form.initial.get("first_name") or "").strip()
+    raw_last = (form.data.get("last_name") or form.initial.get("last_name") or "").strip()
+
+    if raw_first or raw_last:
+        display_name = f"{raw_first} {raw_last}".strip()
+    else:
+        display_name = None  # will fall back to "the child"
+
+    cft_meta = build_cft_meta_for_name(display_name)
+
     return render(
         request,
         "inclusive_ed/student_new.html",
         {
             "form": form,
-            "cft_meta": CFT_QUESTION_META,
+            "cft_meta": cft_meta,
+            # any other context...
         },
     )
 
@@ -601,7 +613,9 @@ def student_enrolment_add(request, student_pk):
 @login_required
 def student_enrolment_edit(request, student_pk, enrolment_pk):
     student = get_object_or_404(Student, pk=student_pk)
-    enrolment = get_object_or_404(StudentSchoolEnrolment, pk=enrolment_pk, student=student)
+    enrolment = get_object_or_404(
+        StudentSchoolEnrolment, pk=enrolment_pk, student=student
+    )
 
     if not user_can_manage_inclusive_ed(request.user):
         raise PermissionDenied
@@ -617,6 +631,10 @@ def student_enrolment_edit(request, student_pk, enrolment_pk):
     else:
         form = StudentEnrolmentForm(instance=enrolment)
 
+    # Build a nice display name for the questions
+    display_name = f"{student.first_name} {student.last_name}".strip() or None
+    cft_meta = build_cft_meta_for_name(display_name)
+
     return render(
         request,
         "inclusive_ed/student_enrolment_edit.html",
@@ -625,9 +643,10 @@ def student_enrolment_edit(request, student_pk, enrolment_pk):
             "enrolment": enrolment,
             "form": form,
             "is_create": False,
-            "cft_meta": CFT_QUESTION_META,
+            "cft_meta": cft_meta,
         },
     )
+
 
 @login_required
 def student_enrolment_delete(request, student_pk, enrolment_pk):

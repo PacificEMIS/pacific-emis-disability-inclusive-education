@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load form_extras cft_display %}
+{% load form_extras cft_display static %}
 {% block title %}Record new disability{% endblock %}
 
 {% block content %}
@@ -135,28 +135,117 @@
 
       <!-- Disability & questionnaire -->
       <h2 class="h6 mb-2">Disability questionnaire</h2>
-      <p class="small text-body-secondary">
-        Record the responses for each of the 20 child functioning questions.
+      <p class="small text-body-secondary mb-3">
+        Select any of the below to record a possible disability.
       </p>
 
       <div class="row g-3">
-        {% for field_name, code, question_text, choices in cft_meta %}
-          {% with field=form|form_field:field_name %}
-            {% if field %}
-              <div class="col-12 col-md-6 col-xl-4">
-                <label for="{{ field.id_for_label }}" class="form-label form-label-sm mb-1">
-                  {{ code }}. {{ question_text }}
-                </label>
-                {{ field }}
-                {% if field.errors %}
-                  <div class="invalid-feedback d-block">
-                    {{ field.errors|striptags }}
+        <!-- Left: domain navigation -->
+        <div class="col-12 col-md-3 col-lg-2 mb-2 mb-md-0">
+          <div
+            id="cft-domain-nav"
+            class="nav flex-row flex-md-column nav-pills small gap-1"
+            role="tablist"
+          >
+            {% comment %} <button
+              type="button"
+              class="nav-link active cft-domain"
+              data-cft-filter="all"
+            >
+              All domains
+            </button> {% endcomment %}
+            <button
+              type="button"
+              class="nav-link cft-domain"
+              data-cft-filter="visual"
+            >
+              Visual issue
+            </button>
+            <button
+              type="button"
+              class="nav-link cft-domain"
+              data-cft-filter="hearing"
+            >
+              Hearing issue
+            </button>
+            <button
+              type="button"
+              class="nav-link cft-domain"
+              data-cft-filter="physical"
+            >
+              Physical issue
+            </button>
+            <button
+              type="button"
+              class="nav-link cft-domain"
+              data-cft-filter="communication"
+            >
+              Communication issue
+            </button>
+            <button
+              type="button"
+              class="nav-link cft-domain"
+              data-cft-filter="learning"
+            >
+              Learning issue
+            </button>
+            <button
+              type="button"
+              class="nav-link cft-domain"
+              data-cft-filter="behaviour"
+            >
+              Behaviour issue
+            </button>
+            <button
+              type="button"
+              class="nav-link cft-domain"
+              data-cft-filter="emotional"
+            >
+              Emotional issue
+            </button>
+          </div>
+        </div>
+
+        <!-- Right: questions -->
+        <div class="col-12 col-md-9 col-lg-10">
+          <div class="row g-3" id="cft-questions">
+            {% for field_name, code, question_text, choices in cft_meta %}
+              {% with field=form|form_field:field_name %}
+                {% if field %}
+                  <div
+                    class="col-12 cft-question"
+                    data-cft-code="{{ code }}"
+                  >
+                    <div class="d-flex align-items-start justify-content-between gap-2">
+
+                      <!-- Label (majority width) -->
+                      <label
+                        for="{{ field.id_for_label }}"
+                        class="form-label form-label-sm mb-0 flex-grow-1 cft-label"
+                        data-cft-original="{{ code }}. {{ question_text }}"
+                        style="max-width: 75%;"
+                      >
+                        {{ code }}. {{ question_text }}
+                      </label>
+
+                      <!-- Dropdown (auto-width) -->
+                      <div class="ms-auto" style="min-width: 180px; max-width: 240px;">
+                        {{ field }}
+                      </div>
+
+                    </div>
+
+                    {% if field.errors %}
+                      <div class="invalid-feedback d-block">
+                        {{ field.errors|striptags }}
+                      </div>
+                    {% endif %}
                   </div>
                 {% endif %}
-              </div>
-            {% endif %}
-          {% endwith %}
-        {% endfor %}
+              {% endwith %}
+            {% endfor %}
+          </div>
+        </div>
       </div>
 
       <div class="mt-4 d-flex justify-content-between">
@@ -265,5 +354,52 @@
   }
 })();
 </script>
+
+<script>
+(function () {
+  const firstInput = document.getElementById("id_first_name");
+  const lastInput = document.getElementById("id_last_name");
+  const labels = document.querySelectorAll(".cft-label");
+
+  if (!firstInput || !lastInput || !labels.length) return;
+
+  // Make sure we have a stable original text for each label
+  labels.forEach((label) => {
+    if (!label.dataset.cftOriginal) {
+      label.dataset.cftOriginal = label.textContent;
+    }
+  });
+
+  function getFullName() {
+    const first = firstInput.value.trim();
+    const last = lastInput.value.trim();
+    return (first + " " + last).trim();
+  }
+
+  function updateLabels() {
+    const fullName = getFullName();
+    const hasName = !!fullName;
+
+    labels.forEach((label) => {
+      const base = label.dataset.cftOriginal || label.textContent;
+      if (!hasName) {
+        // no name → show the base text (with "the child")
+        label.textContent = base;
+      } else {
+        // replace "the child" with the typed name
+        label.textContent = base.replace("the child", fullName);
+      }
+    });
+  }
+
+  firstInput.addEventListener("input", updateLabels);
+  lastInput.addEventListener("input", updateLabels);
+
+  // Initial run (in case form is re-rendered with existing values)
+  updateLabels();
+})();
+</script>
+
+<script src="{% static 'inclusive_ed/cft_tabs.js' %}"></script>
 
 {% endblock %}

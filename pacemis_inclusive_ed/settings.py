@@ -138,10 +138,10 @@ SITE_ID = 1
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 
 # If you keep a project-level static/ folder, include this:
-STATICFILES_DIRS = [BASE_DIR / "static"]  # <-- only if you have <project>/static/
+STATICFILES_DIRS = [BASE_DIR / "static",]  # <-- only if you have <project>/static/
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -241,6 +241,7 @@ LOGGING = {
             "class": "logging.StreamHandler",
             "filters": ["require_debug_true"],
             "formatter": "verbose",
+            "level": "INFO",
         },
         # Console (PROD)
         "console_prod": {

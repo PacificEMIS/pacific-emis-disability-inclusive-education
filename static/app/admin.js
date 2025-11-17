@@ -1,5 +1,3 @@
-// app/static/app/admin.js
-
 // --- Auto-dismiss Bootstrap-style alerts ---
 document.querySelectorAll('.alert[data-autohide="true"]').forEach(el => {
   setTimeout(() => el.classList.add('d-none'), 4000);

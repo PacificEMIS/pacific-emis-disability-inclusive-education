@@ -137,3 +137,26 @@ CFT_QUESTION_META = [
         EMOTIONAL_FREQ_CHOICES_5,
     ),
 ]
+
+def build_cft_meta_for_name(display_name=None):
+    """
+    Return a version of CFT_QUESTION_META where %(name)s is replaced.
+
+    If no display_name is provided, we fall back to a neutral phrase.
+
+    Only used in the edit view (add new news handled in browser with Javascript)
+    """
+    if not display_name:
+        display_name = _("the child")
+
+    meta = []
+    ctx = {"name": display_name}
+    for field_name, code, label, choices in CFT_QUESTION_META:
+        # label is a lazy translation that uses % formatting
+        try:
+            label_with_name = label % ctx
+        except (TypeError, ValueError):
+            # If anything is weird, just keep the original label
+            label_with_name = label
+        meta.append((field_name, code, label_with_name, choices))
+    return meta
