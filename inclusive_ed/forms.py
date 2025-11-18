@@ -140,6 +140,25 @@ class StudentEnrolmentForm(forms.ModelForm):
             "cft20_depressed_frequency",
         ]
         widgets = {
-            "start_date": forms.DateInput(attrs={"type": "date"}),
-            "end_date": forms.DateInput(attrs={"type": "date"}),
+            "school": forms.Select(attrs={"class": "form-select form-select-sm"}),
+            "school_year": forms.Select(attrs={"class": "form-select form-select-sm"}),
+            "class_level": forms.Select(attrs={"class": "form-select form-select-sm"}),
+            "start_date": forms.DateInput(
+                attrs={"type": "date", "class": "form-control form-control-sm"}
+            ),
+            "end_date": forms.DateInput(
+                attrs={"type": "date", "class": "form-control form-control-sm"}
+            ),
+            # CFT fields will be handled in __init__
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Ensure all CFT dropdowns use Bootstrap select styling
+        for name, field in self.fields.items():
+            if name.startswith("cft"):
+                existing = field.widget.attrs.get("class", "")
+                field.widget.attrs["class"] = (
+                    (existing + " form-select form-select-sm").strip()
+                )
