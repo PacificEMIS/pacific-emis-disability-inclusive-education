@@ -18,6 +18,7 @@ from accounts.models import Staff, StaffSchoolMembership
 from inclusive_ed.models import Student, StudentSchoolEnrolment
 from inclusive_ed.forms import StudentCoreForm, StudentDisabilityIntakeForm, StudentEnrolmentForm
 from inclusive_ed.cft_meta import CFT_QUESTION_META, build_cft_meta_for_name
+from inclusive_ed.permissions import can_manage_inclusive_ed
 from integrations.models import EmisClassLevel, EmisSchool, EmisWarehouseYear
 
 PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
@@ -380,7 +381,7 @@ def student_detail(request, pk):
 def student_edit(request, pk):
     student = get_object_or_404(Student, pk=pk)
 
-    if not user_can_manage_inclusive_ed(request.user):
+    if not can_manage_inclusive_ed(request.user):
         raise PermissionDenied
 
     if request.method == "POST":
@@ -403,6 +404,10 @@ def student_edit(request, pk):
 
 @login_required
 def student_new(request):
+
+    if not can_manage_inclusive_ed(request.user):
+        raise PermissionDenied
+    
     if request.method == "POST":
         form = StudentDisabilityIntakeForm(request.POST)
         if form.is_valid():
@@ -574,15 +579,11 @@ def student_matches(request):
 
     return JsonResponse({"results": results})
 
-def user_can_manage_inclusive_ed(user):
-    # keep this simple & consistent; adjust if you later add finer-grained perms
-    return user.is_superuser or user.has_perm("inclusive_ed.access_inclusive_ed")
-
 @login_required
 def student_enrolment_add(request, student_pk):
     student = get_object_or_404(Student, pk=student_pk)
 
-    if not user_can_manage_inclusive_ed(request.user):
+    if not can_manage_inclusive_ed(request.user):
         raise PermissionDenied
 
     if request.method == "POST":
@@ -617,7 +618,7 @@ def student_enrolment_edit(request, student_pk, enrolment_pk):
         StudentSchoolEnrolment, pk=enrolment_pk, student=student
     )
 
-    if not user_can_manage_inclusive_ed(request.user):
+    if not can_manage_inclusive_ed(request.user):
         raise PermissionDenied
 
     if request.method == "POST":
@@ -655,7 +656,7 @@ def student_enrolment_delete(request, student_pk, enrolment_pk):
         StudentSchoolEnrolment, pk=enrolment_pk, student=student
     )
 
-    if not user_can_manage_inclusive_ed(request.user):
+    if not can_manage_inclusive_ed(request.user):
         raise PermissionDenied
 
     if request.method == "POST":
