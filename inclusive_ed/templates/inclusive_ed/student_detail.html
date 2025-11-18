@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load cft_display %}
+{% load cft_display inclusive_ed_perms %}
 
 {% block title %}Student — {{ student.last_name }}, {{ student.first_name }}{% endblock %}
 
@@ -21,7 +21,7 @@
     <a href="{% url 'inclusive_ed:student_list' %}" class="btn btn-sm btn-outline-secondary">
       &larr; Back to students
     </a>
-    {% if user.is_superuser or perms.inclusive_ed.access_inclusive_ed %}
+    {% if user|can_manage_inclusive_ed %}
       <a href="{% url 'inclusive_ed:student_edit' student.pk %}"
         class="btn btn-sm btn-primary">
         Edit profile
@@ -96,7 +96,7 @@
           <span class="badge text-bg-light text-body-secondary">
             {{ student.enrolments.count }} total
           </span>
-          {% if user.is_superuser or perms.inclusive_ed.access_inclusive_ed %}
+          {% if user|can_manage_inclusive_ed %}
             <a href="{% url 'inclusive_ed:student_enrolment_add' student.pk %}"
                class="btn btn-sm btn-primary">
                Add Enrolment
@@ -116,7 +116,7 @@
                   <th scope="col">Class level</th>
                   {% comment %} <th scope="col">Start/End Dates</th> {% endcomment %}
                   <th scope="col" class="text-end">Status &amp; audit</th>
-                  {% if user.is_superuser or perms.inclusive_ed.access_inclusive_ed %}
+                  {% if user|can_manage_inclusive_ed %}
                     <th scope="col" class="text-end">Actions</th>
                   {% endif %}
                 </tr>
@@ -190,7 +190,7 @@
                         </div>
                       {% endif %}
                     </td>
-                    {% if user.is_superuser or perms.inclusive_ed.access_inclusive_ed %}
+                    {% if user|can_manage_inclusive_ed %}
                       <td class="text-end">
                         <a href="{% url 'inclusive_ed:student_enrolment_edit' student.pk e.pk %}"
                           class="btn btn-sm btn-outline-secondary me-1">

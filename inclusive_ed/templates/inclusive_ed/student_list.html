@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load dict_extras %}
+{% load dict_extras inclusive_ed_perms %}
 {% block title %}Students{% endblock %}
 {% block content %}
 
@@ -12,7 +12,9 @@
       </div>
     </div>
     <div>
-      <a href="{% url 'inclusive_ed:student_new' %}" class="btn btn-sm btn-primary">New student</a>
+      {% if user|can_manage_inclusive_ed %}
+        <a href="{% url 'inclusive_ed:student_new' %}" class="btn btn-sm btn-primary">New student</a>
+      {% endif %}
     </div>
   </div>
 
