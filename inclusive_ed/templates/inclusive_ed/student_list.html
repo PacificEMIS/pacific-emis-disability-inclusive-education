@@ -12,7 +12,7 @@
       </div>
     </div>
     <div>
-      {% if user|can_manage_inclusive_ed %}
+      {% if user|can_create_student %}
         <a href="{% url 'inclusive_ed:student_new' %}" class="btn btn-sm btn-primary">New student</a>
       {% endif %}
     </div>
