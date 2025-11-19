@@ -18,7 +18,14 @@ from accounts.models import Staff, StaffSchoolMembership
 from inclusive_ed.models import Student, StudentSchoolEnrolment
 from inclusive_ed.forms import StudentCoreForm, StudentDisabilityIntakeForm, StudentEnrolmentForm
 from inclusive_ed.cft_meta import CFT_QUESTION_META, build_cft_meta_for_name
-from inclusive_ed.permissions import can_manage_inclusive_ed
+from inclusive_ed.permissions import (
+    can_create_student,
+    can_view_student, 
+    filter_students_for_user,
+    can_edit_student,
+    can_delete_student,
+    get_allowed_enrolment_schools,
+)
 from integrations.models import EmisClassLevel, EmisSchool, EmisWarehouseYear
 
 PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
@@ -299,6 +306,9 @@ def student_list(request):
             order_fields = tuple(f"-{f}" for f in order_fields)
         qs = qs.order_by(*order_fields)
 
+    # Per-school (row-based) filtering based on logged in user's role
+    qs = filter_students_for_user(qs, request.user)
+
     # Pagination
     paginator = Paginator(qs, per_page)
     page_number = request.GET.get("page") or 1
@@ -360,6 +370,10 @@ def student_detail(request, pk):
         pk=pk,
     )
 
+    # ---- Row-level permission check ----
+    if not can_view_student(request.user, student):
+        raise PermissionDenied
+
     # Order enrolments: newest year first, then created_at, then id
     enrolments = (
         student.enrolments
@@ -377,11 +391,13 @@ def student_detail(request, pk):
     }
     return render(request, "inclusive_ed/student_detail.html", context)
 
+
 @login_required
 def student_edit(request, pk):
     student = get_object_or_404(Student, pk=pk)
 
-    if not can_manage_inclusive_ed(request.user):
+    # Row-level + role-based check
+    if not can_edit_student(request.user, student):
         raise PermissionDenied
 
     if request.method == "POST":
@@ -405,11 +421,14 @@ def student_edit(request, pk):
 @login_required
 def student_new(request):
 
-    if not can_manage_inclusive_ed(request.user):
+    if not can_create_student(request.user):
         raise PermissionDenied
-    
+
     if request.method == "POST":
         form = StudentDisabilityIntakeForm(request.POST)
+        # ---- limit schools for this user ----
+        form.fields["school"].queryset = get_allowed_enrolment_schools(request.user)
+
         if form.is_valid():
             cd = form.cleaned_data
             cft_data = form.get_cft_cleaned_data()
@@ -460,6 +479,8 @@ def student_new(request):
 
     else:
         form = StudentDisabilityIntakeForm()
+        # ---- limit schools for this user ----
+        form.fields["school"].queryset = get_allowed_enrolment_schools(request.user)
 
     # Build a display name from whatever we have in the form
     raw_first = (form.data.get("first_name") or form.initial.get("first_name") or "").strip()
@@ -478,7 +499,6 @@ def student_new(request):
         {
             "form": form,
             "cft_meta": cft_meta,
-            # any other context...
         },
     )
 
@@ -583,11 +603,15 @@ def student_matches(request):
 def student_enrolment_add(request, student_pk):
     student = get_object_or_404(Student, pk=student_pk)
 
-    if not can_manage_inclusive_ed(request.user):
+    # Only users who can edit this student may add enrolments
+    if not can_edit_student(request.user, student):
         raise PermissionDenied
 
     if request.method == "POST":
         form = StudentEnrolmentForm(request.POST)
+        # ---- limit schools for this user ----
+        form.fields["school"].queryset = get_allowed_enrolment_schools(request.user)
+
         if form.is_valid():
             enrol = form.save(commit=False)
             enrol.student = student
@@ -598,6 +622,12 @@ def student_enrolment_add(request, student_pk):
             return redirect("inclusive_ed:student_detail", pk=student.pk)
     else:
         form = StudentEnrolmentForm()
+        # ---- limit schools for this user ----
+        form.fields["school"].queryset = get_allowed_enrolment_schools(request.user)
+
+    # Use the same friendly label text with the student's name
+    display_name = f"{student.first_name} {student.last_name}".strip() or None
+    cft_meta = build_cft_meta_for_name(display_name)
 
     return render(
         request,
@@ -607,7 +637,7 @@ def student_enrolment_add(request, student_pk):
             "enrolment": None,
             "form": form,
             "is_create": True,
-            "cft_meta": CFT_QUESTION_META,
+            "cft_meta": cft_meta,
         },
     )
 
@@ -618,11 +648,15 @@ def student_enrolment_edit(request, student_pk, enrolment_pk):
         StudentSchoolEnrolment, pk=enrolment_pk, student=student
     )
 
-    if not can_manage_inclusive_ed(request.user):
+    # Row-level + role-based check
+    if not can_edit_student(request.user, student):
         raise PermissionDenied
 
     if request.method == "POST":
         form = StudentEnrolmentForm(request.POST, instance=enrolment)
+        # ---- limit schools for this user ----
+        form.fields["school"].queryset = get_allowed_enrolment_schools(request.user)
+
         if form.is_valid():
             enrol = form.save(commit=False)
             enrol.last_updated_by = request.user
@@ -631,6 +665,8 @@ def student_enrolment_edit(request, student_pk, enrolment_pk):
             return redirect("inclusive_ed:student_detail", pk=student.pk)
     else:
         form = StudentEnrolmentForm(instance=enrolment)
+        # ---- limit schools for this user ----
+        form.fields["school"].queryset = get_allowed_enrolment_schools(request.user)
 
     # Build a nice display name for the questions
     display_name = f"{student.first_name} {student.last_name}".strip() or None
@@ -648,7 +684,6 @@ def student_enrolment_edit(request, student_pk, enrolment_pk):
         },
     )
 
-
 @login_required
 def student_enrolment_delete(request, student_pk, enrolment_pk):
     student = get_object_or_404(Student, pk=student_pk)
@@ -656,7 +691,8 @@ def student_enrolment_delete(request, student_pk, enrolment_pk):
         StudentSchoolEnrolment, pk=enrolment_pk, student=student
     )
 
-    if not can_manage_inclusive_ed(request.user):
+    # Row-level + role-based check
+    if not can_delete_student(request.user, student):
         raise PermissionDenied
 
     if request.method == "POST":
