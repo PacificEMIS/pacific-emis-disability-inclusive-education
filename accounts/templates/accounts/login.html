@@ -1,19 +1,22 @@
 {% extends "base.html" %}
 {% load socialaccount %}
 {% block content %}
-  <div class="container" style="max-width:420px;padding:2rem 1rem;text-align:center;">
-    <h1>Sign in</h1>
-    <p>Use your organization Google account to access the Pacific EMIS — Disability Inclusive Education.</p>
+  <div class="container d-flex justify-content-center">
+    <div class="w-100">
+      <div class="py-4 px-3 text-center">
+        <h1>Sign in</h1>
+        <p>Use your organization Google account to access the {{ emis_context }} — Disability Inclusive Education.</p>
 
-    <p style="margin-top:1.25rem;">
-      <a href="{% provider_login_url 'google' %}"
-         class="btn btn-primary" style="padding:.75rem 1.25rem;">
-        Continue with Google
-      </a>
-    </p>
+        <p class="mt-4">
+          <a href="{% provider_login_url 'google' %}" class="btn btn-primary px-4 py-2">
+            Continue with Google
+          </a>
+        </p>
 
-    <p style="margin-top:1rem;font-size:.9rem;color:#666;">
-      Don’t have access yet? Sign in first, then an administrator can grant permissions.
-    </p>
+        <p class="mt-3 text-muted small">
+          Don’t have access yet? Sign in first, then an administrator can grant permissions.
+        </p>
+      </div>
+    </div>
   </div>
-{% endblock %}
+{% endblock content %}

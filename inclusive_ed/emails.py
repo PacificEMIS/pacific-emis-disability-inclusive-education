@@ -6,9 +6,11 @@ from django.template.loader import render_to_string
 from django.urls import reverse
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 from threading import Thread
+
 
 def _get_inclusive_admin_emails():
     """
@@ -19,11 +21,17 @@ def _get_inclusive_admin_emails():
     except Group.DoesNotExist:
         return []
 
-    qs = group.user_set.filter(is_active=True).exclude(email__isnull=True).exclude(email__exact="")
+    qs = (
+        group.user_set.filter(is_active=True)
+        .exclude(email__isnull=True)
+        .exclude(email__exact="")
+    )
     return [u.email for u in qs]
 
 
-def send_student_created_email(*, student, enrolment, created_by, request=None, student_url=None):
+def send_student_created_email(
+    *, student, enrolment, created_by, request=None, student_url=None
+):
     """
     Send HTML + text email when a new disability record is created.
     Recipients: creator + all "InclusiveEd - Admins" (but not Django ADMINS).
@@ -122,7 +130,7 @@ def send_student_created_email(*, student, enrolment, created_by, request=None, 
         "has_behaviour": has_behaviour,
         "has_emotional": has_emotional,
         "student_url": student_url,
-        "emis_context": settings.EMIS["CONTEXT"]
+        "emis_context": settings.EMIS["CONTEXT"],
     }
 
     subject = f"{settings.EMIS["CONTEXT"]} Disability Inclusive Education disability record created notification: {student.first_name} {student.last_name}"
@@ -139,7 +147,10 @@ def send_student_created_email(*, student, enrolment, created_by, request=None, 
     msg.attach_alternative(html_body, "text/html")
     msg.send(fail_silently=False)
 
-def send_student_created_email_async(student, enrolment, created_by, request=None, student_url=None):
+
+def send_student_created_email_async(
+    student, enrolment, created_by, request=None, student_url=None
+):
     """
     Fire-and-forget wrapper: send the email on a background thread so the
     HTTP request isn't blocked by SMTP latency.
@@ -152,7 +163,7 @@ def send_student_created_email_async(student, enrolment, created_by, request=Non
                 enrolment=enrolment,
                 created_by=created_by,
                 request=request,
-                student_url=student_url
+                student_url=student_url,
             )
         except Exception:
             logger.warning(

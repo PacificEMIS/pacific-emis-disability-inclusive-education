@@ -11,31 +11,124 @@ from integrations.models import EmisSchool, EmisWarehouseYear, EmisClassLevel
 
 # Expanded pools to reduce duplicate names
 FIRST_NAMES = [
-    "Ari", "Ben", "Cita", "Dani", "Eli", "Fina", "Gabe", "Hana", "Ika",
-    "Jori", "Keni", "Lani", "Mika", "Niko", "Ona", "Pasi", "Rina", "Sami",
-    "Tala", "Vika", "Wena", "Yani", "Zora",
-    "Alani", "Beniata", "Corin", "Dela", "Emani", "Fatu", "Gina", "Hiko",
-    "Inia", "Jona", "Keani", "Loma", "Malo", "Naea", "Olia", "Peni",
-    "Ratu", "Sione", "Tasi", "Ula", "Vani", "Waqa", "Yara", "Zeni",
+    "Ari",
+    "Ben",
+    "Cita",
+    "Dani",
+    "Eli",
+    "Fina",
+    "Gabe",
+    "Hana",
+    "Ika",
+    "Jori",
+    "Keni",
+    "Lani",
+    "Mika",
+    "Niko",
+    "Ona",
+    "Pasi",
+    "Rina",
+    "Sami",
+    "Tala",
+    "Vika",
+    "Wena",
+    "Yani",
+    "Zora",
+    "Alani",
+    "Beniata",
+    "Corin",
+    "Dela",
+    "Emani",
+    "Fatu",
+    "Gina",
+    "Hiko",
+    "Inia",
+    "Jona",
+    "Keani",
+    "Loma",
+    "Malo",
+    "Naea",
+    "Olia",
+    "Peni",
+    "Ratu",
+    "Sione",
+    "Tasi",
+    "Ula",
+    "Vani",
+    "Waqa",
+    "Yara",
+    "Zeni",
 ]
 
 LAST_NAMES = [
-    "Abel", "Beni", "Cabral", "Dano", "Emani", "Faro", "Gonzales", "Hare",
-    "Isamu", "Jorin", "Katoa", "Loto", "Malo", "Nase", "Oto", "Paea",
-    "Ratu", "Sione", "Taito", "Ula", "Vakalahi", "Waqa", "Yano", "Zed",
-    "Akau", "Bale", "Cama", "Delai", "Eroni", "Fale", "Galo", "Hani",
-    "Isoa", "Jope", "Koro", "Langi", "Mata", "Nuku", "Osea", "Pule",
-    "Raea", "Saka", "Taito", "Uati", "Vera", "Wani", "Yale", "Zola",
+    "Abel",
+    "Beni",
+    "Cabral",
+    "Dano",
+    "Emani",
+    "Faro",
+    "Gonzales",
+    "Hare",
+    "Isamu",
+    "Jorin",
+    "Katoa",
+    "Loto",
+    "Malo",
+    "Nase",
+    "Oto",
+    "Paea",
+    "Ratu",
+    "Sione",
+    "Taito",
+    "Ula",
+    "Vakalahi",
+    "Waqa",
+    "Yano",
+    "Zed",
+    "Akau",
+    "Bale",
+    "Cama",
+    "Delai",
+    "Eroni",
+    "Fale",
+    "Galo",
+    "Hani",
+    "Isoa",
+    "Jope",
+    "Koro",
+    "Langi",
+    "Mata",
+    "Nuku",
+    "Osea",
+    "Pule",
+    "Raea",
+    "Saka",
+    "Taito",
+    "Uati",
+    "Vera",
+    "Wani",
+    "Yale",
+    "Zola",
 ]
 
 # Class level → official age (years)
 OFFICIAL_AGE = {
     # KPS*
-    "P1": 6, "P2": 7, "P3": 8, "P4": 9, "P5": 10, "P6": 11,
+    "P1": 6,
+    "P2": 7,
+    "P3": 8,
+    "P4": 9,
+    "P5": 10,
+    "P6": 11,
     # KJSS*
-    "JS1": 12, "JS2": 13, "JS3": 14,
+    "JS1": 12,
+    "JS2": 13,
+    "JS3": 14,
     # KSSS*
-    "SS1": 15, "SS2": 16, "SS3": 17, "SS4": 18,
+    "SS1": 15,
+    "SS2": 16,
+    "SS3": 17,
+    "SS4": 18,
 }
 
 # For each school code pattern, allowed class levels
@@ -62,7 +155,7 @@ def random_yes_no_or_none(p_yes: float = 0.15, p_none: float = 0.4) -> int | Non
     r2 = random.random()
     if r2 < p_yes / (1 - p_none):
         return 1  # Yes
-    return 2      # No
+    return 2  # No
 
 
 def random_difficulty_or_none(p_none: float = 0.5) -> int | None:
@@ -190,8 +283,7 @@ class Command(BaseCommand):
         # Preload class levels
         needed_levels = set(l for grp in LEVELS_BY_PATTERN.values() for l in grp)
         level_map = {
-            cl.code: cl
-            for cl in EmisClassLevel.objects.filter(code__in=needed_levels)
+            cl.code: cl for cl in EmisClassLevel.objects.filter(code__in=needed_levels)
         }
         missing = needed_levels - set(level_map.keys())
         if missing:

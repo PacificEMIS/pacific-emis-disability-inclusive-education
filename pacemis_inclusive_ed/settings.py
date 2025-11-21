@@ -9,11 +9,13 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
+
 import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
 
 # Handle different boolean settings
 def env_bool(name, default=False):
@@ -21,6 +23,7 @@ def env_bool(name, default=False):
     if val is None:
         return default
     return val.lower() in ("1", "true", "yes", "on")
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -36,61 +39,57 @@ ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split("
 
 # Application definition
 
-INSTALLED_APPS = [    
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-
+INSTALLED_APPS = [
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
     # Required by allauth
     "django.contrib.sites",
-
     # allauth core
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
-
     # Google provider
     "allauth.socialaccount.providers.google",
-
     # Project apps
     "accounts",
     "integrations",
-    "inclusive_ed",    
+    "inclusive_ed",
 ]
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'allauth.account.middleware.AccountMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = 'pacemis_inclusive_ed.urls'
+ROOT_URLCONF = "pacemis_inclusive_ed.urls"
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / "templates"],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [BASE_DIR / "templates"],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
                 "accounts.context_processors.staff_context",
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = 'pacemis_inclusive_ed.wsgi.application'
+WSGI_APPLICATION = "pacemis_inclusive_ed.wsgi.application"
 
 
 # Database
@@ -114,16 +113,16 @@ DATABASES = {
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
 
@@ -131,9 +130,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = "UTC"
 
 USE_I18N = True
 
@@ -144,15 +143,17 @@ SITE_ID = 1
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = '/static/'
+STATIC_URL = "/static/"
 
 # If you keep a project-level static/ folder, include this:
-STATICFILES_DIRS = [BASE_DIR / "static",]  # <-- only if you have <project>/static/
+STATICFILES_DIRS = [
+    BASE_DIR / "static",
+]  # <-- only if you have <project>/static/
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 ###############################################################################
 # Authentication settings
@@ -164,15 +165,15 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 # Smoothest developer defaults — tweak for production
-ACCOUNT_EMAIL_VERIFICATION = "none" # or "mendatory", "optional"
+ACCOUNT_EMAIL_VERIFICATION = "none"  # or "mendatory", "optional"
 ACCOUNT_SIGNUP_FIELDS = ["email*", "username*", "password1*", "password2*"]
-ACCOUNT_LOGIN_METHODS = {'username', 'email'}
+ACCOUNT_LOGIN_METHODS = {"username", "email"}
 SOCIALACCOUNT_LOGIN_ON_GET = True
 
 # Before, without allauth
-#LOGIN_URL = "accounts:login"
-#LOGIN_REDIRECT_URL = "inclusive_ed:dashboard"
-#LOGOUT_REDIRECT_URL = "accounts:login"
+# LOGIN_URL = "accounts:login"
+# LOGIN_REDIRECT_URL = "inclusive_ed:dashboard"
+# LOGOUT_REDIRECT_URL = "accounts:login"
 # With allauth
 LOGIN_URL = "account_login"
 LOGIN_REDIRECT_URL = "accounts:post_login_router"
@@ -188,7 +189,7 @@ SOCIALACCOUNT_PROVIDERS = {
 }
 
 # Optional: limit signups to specific email domains (uncomment + set)
-#ALLOWED_SIGNUP_DOMAINS = ["moe.gov.ki", "pacific-emis.org"]
+# ALLOWED_SIGNUP_DOMAINS = ["moe.gov.ki", "pacific-emis.org"]
 
 ###############################################################################
 # EMIS integration settings
@@ -249,12 +250,10 @@ if not ADMINS:
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
-
     "filters": {
         "require_debug_true": {"()": "django.utils.log.RequireDebugTrue"},
         "require_debug_false": {"()": "django.utils.log.RequireDebugFalse"},
     },
-
     "formatters": {
         "verbose": {
             "format": "[%(asctime)s] %(levelname)s %(name)s:%(lineno)d — %(message)s",
@@ -263,7 +262,6 @@ LOGGING = {
             "format": "%(levelname)s %(name)s — %(message)s",
         },
     },
-
     "handlers": {
         # Console (DEV)
         "console_dev": {
@@ -293,13 +291,11 @@ LOGGING = {
         #     "formatter": "verbose",
         # },
     },
-
     # Default/root logger
     "root": {
         "handlers": ["console_dev", "console_prod"],  # add "file" if you enabled it
         "level": "DEBUG" if DEBUG else "INFO",
     },
-
     "loggers": {
         # Django core
         "django": {
@@ -318,7 +314,6 @@ LOGGING = {
             "level": "WARNING",
             "propagate": False,
         },
-
         # allauth (handy during OAuth debugging)
         "allauth": {
             "handlers": ["console_dev", "console_prod"],
@@ -335,7 +330,6 @@ LOGGING = {
             "level": "DEBUG" if DEBUG else "INFO",
             "propagate": False,
         },
-
         # Uncomment if you use gunicorn and want its errors to surface similarly
         # "gunicorn.error": {
         #     "handlers": ["console_prod"],
@@ -349,4 +343,3 @@ LOGGING = {
         # },
     },
 }
-

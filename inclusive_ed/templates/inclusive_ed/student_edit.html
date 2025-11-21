@@ -1,83 +1,56 @@
 {% extends "base.html" %}
-{% block title %}Edit student — {{ student.first_name }} {{ student.last_name }}{% endblock %}
-
+{% block title %}Edit student — {{ student.first_name }} {{ student.last_name }}{% endblock title %}
 {% block content %}
-
-<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-  <div>
-    <h1 class="h4 mb-0">
-      Edit student profile
-    </h1>
-    <div class="small text-body-secondary">
-      {{ student.first_name }} {{ student.last_name }}
-      {% if student.date_of_birth %}
-        · DOB: {{ student.date_of_birth|date:"Y-m-d" }}
-      {% endif %}
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <div>
+            <h1 class="h4 mb-0">Edit student profile</h1>
+            <div class="small text-body-secondary">
+                {{ student.first_name }} {{ student.last_name }}
+                {% if student.date_of_birth %}· DOB: {{ student.date_of_birth|date:"Y-m-d" }}{% endif %}
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'inclusive_ed:student_detail' student.pk %}"
+               class="btn btn-sm btn-outline-secondary">← Back to student</a>
+        </div>
     </div>
-  </div>
-  <div class="d-flex gap-2">
-    <a href="{% url 'inclusive_ed:student_detail' student.pk %}"
-       class="btn btn-sm btn-outline-secondary">
-      &larr; Back to student
-    </a>
-  </div>
-</div>
-
-<div class="card shadow-sm">
-  <div class="card-header">
-    <h2 class="h6 mb-0">Profile details</h2>
-  </div>
-  <div class="card-body">
-    <form method="post" class="row g-3">
-      {% csrf_token %}
-
-      <div class="col-12 col-md-6">
-        <label for="{{ form.first_name.id_for_label }}" class="form-label form-label-sm">
-          First name
-        </label>
-        {{ form.first_name }}
-        {% if form.first_name.errors %}
-          <div class="invalid-feedback d-block">
-            {{ form.first_name.errors|striptags }}
-          </div>
-        {% endif %}
-      </div>
-
-      <div class="col-12 col-md-6">
-        <label for="{{ form.last_name.id_for_label }}" class="form-label form-label-sm">
-          Last name
-        </label>
-        {{ form.last_name }}
-        {% if form.last_name.errors %}
-          <div class="invalid-feedback d-block">
-            {{ form.last_name.errors|striptags }}
-          </div>
-        {% endif %}
-      </div>
-
-      <div class="col-12 col-md-4">
-        <label for="{{ form.date_of_birth.id_for_label }}" class="form-label form-label-sm">
-          Date of birth
-        </label>
-        {{ form.date_of_birth }}
-        {% if form.date_of_birth.errors %}
-          <div class="invalid-feedback d-block">
-            {{ form.date_of_birth.errors|striptags }}
-          </div>
-        {% endif %}
-      </div>
-
-      <div class="col-12 d-flex justify-content-between mt-3">
-        <a href="{% url 'inclusive_ed:student_detail' student.pk %}"
-           class="btn btn-sm btn-outline-secondary">
-          Cancel
-        </a>
-        <button type="submit" class="btn btn-sm btn-primary">
-          Save changes
-        </button>
-      </div>
-    </form>
-  </div>
-</div>
-
-{% endblock %}
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <h2 class="h6 mb-0">Profile details</h2>
+        </div>
+        <div class="card-body">
+            <form method="post" class="row g-3">
+                {% csrf_token %}
+                <div class="col-12 col-md-6">
+                    <label for="{{ form.first_name.id_for_label }}"
+                           class="form-label form-label-sm">First name</label>
+                    {{ form.first_name }}
+                    {% if form.first_name.errors %}
+                        <div class="invalid-feedback d-block">{{ form.first_name.errors|striptags }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-12 col-md-6">
+                    <label for="{{ form.last_name.id_for_label }}"
+                           class="form-label form-label-sm">Last name</label>
+                    {{ form.last_name }}
+                    {% if form.last_name.errors %}
+                        <div class="invalid-feedback d-block">{{ form.last_name.errors|striptags }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-12 col-md-4">
+                    <label for="{{ form.date_of_birth.id_for_label }}"
+                           class="form-label form-label-sm">Date of birth</label>
+                    {{ form.date_of_birth }}
+                    {% if form.date_of_birth.errors %}
+                        <div class="invalid-feedback d-block">{{ form.date_of_birth.errors|striptags }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-12 d-flex justify-content-between mt-3">
+                    <a href="{% url 'inclusive_ed:student_detail' student.pk %}"
+                       class="btn btn-sm btn-outline-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-sm btn-primary">Save changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock content %}

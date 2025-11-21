@@ -1,10 +1,12 @@
 from django.db import transaction
 
+
 class CreatedUpdatedAuditMixin:
     """
     - On create: set created_by if empty; always set last_updated_by.
     - For inlines: also set fields and handle deletions explicitly.
     """
+
     def save_model(self, request, obj, form, change):
         if not change and getattr(obj, "created_by_id", None) is None:
             obj.created_by = request.user

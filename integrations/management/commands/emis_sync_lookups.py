@@ -1,7 +1,13 @@
 from django.core.management.base import BaseCommand
 from django.db import transaction
-from integrations.models import EmisSchool, EmisClassLevel, EmisJobTitle, EmisWarehouseYear
+from integrations.models import (
+    EmisSchool,
+    EmisClassLevel,
+    EmisJobTitle,
+    EmisWarehouseYear,
+)
 from integrations.emis_client import EmisClient
+
 
 class Command(BaseCommand):
     help = "Fetch /api/lookups/collection/core and update local schools & class levels"
@@ -80,14 +86,14 @@ class Command(BaseCommand):
             "Job Titles +{}/{}, "
             "Warehouse Years +{}/{}"
         ).format(
-            added_sch, 
-            updated_sch, 
-            added_lvl, 
-            updated_lvl, 
-            added_title, 
-            updated_title, 
-            added_year, 
-            updated_year
+            added_sch,
+            updated_sch,
+            added_lvl,
+            updated_lvl,
+            added_title,
+            updated_title,
+            added_year,
+            updated_year,
         )
 
         self.stdout.write(self.style.SUCCESS(msg))

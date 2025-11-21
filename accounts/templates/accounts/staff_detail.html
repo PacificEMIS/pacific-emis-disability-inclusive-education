@@ -1,411 +1,329 @@
 {% extends "base.html" %}
-{% block title %}Staff — {{ staff.user.get_full_name|default:staff.user.username }}{% endblock %}
-
+{% block title %}Staff — {{ staff.user.get_full_name|default:staff.user.username }}{% endblock title %}
 {% block content %}
-
-<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-  <div>
-    <h1 class="h4 mb-0">
-      {% if staff.user.first_name or staff.user.last_name %}
-        {{ staff.user.first_name }} {{ staff.user.last_name }}
-      {% else %}
-        {{ staff.user.username }}
-      {% endif %}
-    </h1>
-    <div class="small text-body-secondary">
-      Username: {{ staff.user.username }}
-      {% if staff.user.email %}
-        · {{ staff.user.email }}
-      {% endif %}
-    </div>
-  </div>
-  <div class="d-flex gap-2">
-    <a href="{% url 'accounts:staff_list' %}" class="btn btn-sm btn-outline-secondary">
-      &larr; Back to staff
-    </a>
-    {# placeholder for future staff edit #}
-    {# {% if user.is_superuser or perms.accounts.change_staff %} #}
-    {#   <button type="button" class="btn btn-sm btn-primary" disabled> #}
-    {#     Edit (coming soon) #}
-    {#   </button> #}
-    {# {% endif %} #}
-  </div>
-</div>
-
-{# FIRST ROW: Profile + Permissions #}
-<div class="row g-3">
-
-  <!-- Profile / account summary -->
-  <div class="col-12 col-xl-4">
-    <div class="card shadow-sm h-100">
-      <div class="card-header">
-        <h2 class="h6 mb-0">Profile</h2>
-      </div>
-      <div class="card-body small">
-        <dl class="row mb-2">
-          <dt class="col-5 col-sm-4">Name</dt>
-          <dd class="col-7 col-sm-8">
-            {% if staff.user.first_name or staff.user.last_name %}
-              {{ staff.user.first_name }} {{ staff.user.last_name }}
-            {% else %}
-              <span class="text-body-secondary">Not set</span>
-            {% endif %}
-          </dd>
-
-          <dt class="col-5 col-sm-4">Username</dt>
-          <dd class="col-7 col-sm-8">
-            {{ staff.user.username }}
-          </dd>
-
-          <dt class="col-5 col-sm-4">Email</dt>
-          <dd class="col-7 col-sm-8">
-            {% if staff.user.email %}
-              {{ staff.user.email }}
-            {% else %}
-              <span class="text-body-secondary">Not set</span>
-            {% endif %}
-          </dd>
-
-          <dt class="col-5 col-sm-4">Status</dt>
-          <dd class="col-7 col-sm-8">
-            {% if staff.user.is_active %}
-              <span class="badge text-bg-success">Active</span>
-            {% else %}
-              <span class="badge text-bg-secondary">Inactive</span>
-            {% endif %}
-          </dd>
-
-          <dt class="col-5 col-sm-4">Role flags</dt>
-          <dd class="col-7 col-sm-8">
-            {% if staff.user.is_superuser %}
-              <span class="badge text-bg-danger me-1">Superuser</span>
-            {% endif %}
-            {% if staff.user.is_staff %}
-              <span class="badge text-bg-primary me-1">Staff</span>
-            {% endif %}
-            {% if not staff.user.is_superuser and not staff.user.is_staff %}
-              <span class="text-body-secondary">Standard user</span>
-            {% endif %}
-          </dd>
-        </dl>
-
-        <hr>
-
-        <dl class="row mb-0">
-          <dt class="col-5 col-sm-4">Created</dt>
-          <dd class="col-7 col-sm-8">
-            {{ staff.created_at|date:"Y-m-d" }}
-            {% if staff.created_by %}
-              <span class="text-body-secondary">
-                · by {{ staff.created_by.get_full_name|default:staff.created_by.username }}
-              </span>
-            {% endif %}
-          </dd>
-
-          <dt class="col-5 col-sm-4">Last updated</dt>
-          <dd class="col-7 col-sm-8">
-            {{ staff.last_updated_at|date:"Y-m-d" }}
-            {% if staff.last_updated_by %}
-              <span class="text-body-secondary">
-                · by {{ staff.last_updated_by.get_full_name|default:staff.last_updated_by.username }}
-              </span>
-            {% endif %}
-          </dd>
-        </dl>
-      </div>
-    </div>
-  </div>
-
-  <!-- Permissions summary -->
-  <div class="col-12 col-xl-8">
-    <div class="card shadow-sm h-100">
-      <div class="card-header d-flex align-items-center justify-content-between">
-        <h2 class="h6 mb-0">Permissions</h2>
-        {% if staff.user.is_superuser %}
-          <span class="badge text-bg-danger">Full access (superuser)</span>
-        {% elif staff.user.is_staff %}
-          <span class="badge text-bg-primary">Staff access</span>
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <div>
+      <h1 class="h4 mb-0">
+        {% if staff.user.first_name or staff.user.last_name %}
+          {{ staff.user.first_name }} {{ staff.user.last_name }}
         {% else %}
-          <span class="badge text-bg-light text-body-secondary">Standard user</span>
+          {{ staff.user.username }}
         {% endif %}
+      </h1>
+      <div class="small text-body-secondary">
+        Username: {{ staff.user.username }}
+        {% if staff.user.email %}· {{ staff.user.email }}{% endif %}
       </div>
-      <div class="card-body small">
-
-        {% with u=staff.user %}
-
-          {# High-level summary #}
-          {% if u.is_superuser %}
-            <p class="mb-3">
-              This user is a <strong>superuser</strong> and has all permissions in the system.
-              Groups and direct permissions are shown below for reference only.
-            </p>
-          {% else %}
-            <p class="mb-3">
-              This user’s access is determined by their
-              {% if u.is_staff %}
-                <strong>staff status</strong>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{% url 'accounts:staff_list' %}"
+         class="btn btn-sm btn-outline-secondary">← Back to staff</a>
+      {# placeholder for future staff edit #}
+      {# {% if user.is_superuser or perms.accounts.change_staff %} #}
+      {#   <button type="button" class="btn btn-sm btn-primary" disabled> #}
+      {#     Edit (coming soon) #}
+      {#   </button> #}
+      {# {% endif %} #}
+    </div>
+  </div>
+  {# FIRST ROW: Profile + Permissions #}
+  <div class="row g-3">
+    <!-- Profile / account summary -->
+    <div class="col-12 col-xl-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-header">
+          <h2 class="h6 mb-0">Profile</h2>
+        </div>
+        <div class="card-body small">
+          <dl class="row mb-2">
+            <dt class="col-5 col-sm-4">Name</dt>
+            <dd class="col-7 col-sm-8">
+              {% if staff.user.first_name or staff.user.last_name %}
+                {{ staff.user.first_name }} {{ staff.user.last_name }}
               {% else %}
-                <strong>standard user status</strong>
+                <span class="text-body-secondary">Not set</span>
               {% endif %}
-              and the <strong>groups</strong> and <strong>direct permissions</strong> assigned to them.
-            </p>
-          {% endif %}
-
-          {# Groups with structured permissions #}
-          <h3 class="h6 mt-2 mb-2">Groups</h3>
-          {% if group_permissions %}
-            <ul class="list-unstyled mb-0">
-              {% for gp in group_permissions %}
-                <li class="mb-3">
-                  <div class="fw-semibold">
-                    {{ gp.group.name }}
-                  </div>
-                  {% if gp.sections %}
-                    <dl class="row mb-0 mt-1">
-                      {% for sec in gp.sections %}
-                        <dt class="col-4 col-sm-3 col-lg-2">
-                          {{ sec.label }}:
-                        </dt>
-                        <dd class="col-8 col-sm-9 col-lg-10">
-                          {{ sec.models|join:", " }}
-                        </dd>
-                      {% endfor %}
-                    </dl>
-                  {% else %}
-                    <div class="text-body-secondary">
-                      No permissions assigned to this group.
-                    </div>
-                  {% endif %}
-                </li>
-              {% endfor %}
-            </ul>
+            </dd>
+            <dt class="col-5 col-sm-4">Username</dt>
+            <dd class="col-7 col-sm-8">
+              {{ staff.user.username }}
+            </dd>
+            <dt class="col-5 col-sm-4">Email</dt>
+            <dd class="col-7 col-sm-8">
+              {% if staff.user.email %}
+                {{ staff.user.email }}
+              {% else %}
+                <span class="text-body-secondary">Not set</span>
+              {% endif %}
+            </dd>
+            <dt class="col-5 col-sm-4">Status</dt>
+            <dd class="col-7 col-sm-8">
+              {% if staff.user.is_active %}
+                <span class="badge text-bg-success">Active</span>
+              {% else %}
+                <span class="badge text-bg-secondary">Inactive</span>
+              {% endif %}
+            </dd>
+            <dt class="col-5 col-sm-4">Role flags</dt>
+            <dd class="col-7 col-sm-8">
+              {% if staff.user.is_superuser %}<span class="badge text-bg-danger me-1">Superuser</span>{% endif %}
+              {% if staff.user.is_staff %}<span class="badge text-bg-primary me-1">Staff</span>{% endif %}
+              {% if not staff.user.is_superuser and not staff.user.is_staff %}
+                <span class="text-body-secondary">Standard user</span>
+              {% endif %}
+            </dd>
+          </dl>
+          <hr>
+          <dl class="row mb-0">
+            <dt class="col-5 col-sm-4">Created</dt>
+            <dd class="col-7 col-sm-8">
+              {{ staff.created_at|date:"Y-m-d" }}
+              {% if staff.created_by %}
+                <span class="text-body-secondary">· by {{ staff.created_by.get_full_name|default:staff.created_by.username }}</span>
+              {% endif %}
+            </dd>
+            <dt class="col-5 col-sm-4">Last updated</dt>
+            <dd class="col-7 col-sm-8">
+              {{ staff.last_updated_at|date:"Y-m-d" }}
+              {% if staff.last_updated_by %}
+                <span class="text-body-secondary">
+                  · by {{ staff.last_updated_by.get_full_name|default:staff.last_updated_by.username }}
+                </span>
+              {% endif %}
+            </dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+    <!-- Permissions summary -->
+    <div class="col-12 col-xl-8">
+      <div class="card shadow-sm h-100">
+        <div class="card-header d-flex align-items-center justify-content-between">
+          <h2 class="h6 mb-0">Permissions</h2>
+          {% if staff.user.is_superuser %}
+            <span class="badge text-bg-danger">Full access (superuser)</span>
+          {% elif staff.user.is_staff %}
+            <span class="badge text-bg-primary">Staff access</span>
           {% else %}
-            <p class="text-body-secondary mb-0">
-              Not a member of any groups.
-            </p>
+            <span class="badge text-bg-light text-body-secondary">Standard user</span>
           {% endif %}
-
-          {# Direct permissions (assigned to the user, not via groups) #}
-          {% if direct_permission_sections %}
-            <h3 class="h6 mt-4 mb-2">Direct permissions</h3>
-            <dl class="row mb-0">
-              {% for sec in direct_permission_sections %}
-                <dt class="col-4 col-sm-3 col-lg-2">
-                  {{ sec.label }}:
-                </dt>
-                <dd class="col-8 col-sm-9 col-lg-10">
-                  {{ sec.models|join:", " }}
-                </dd>
-              {% endfor %}
-            </dl>
-          {% endif %}
-
-        {% endwith %}
-
+        </div>
+        <div class="card-body small">
+          {% with u=staff.user %}
+            {# High-level summary #}
+            {% if u.is_superuser %}
+              <p class="mb-3">
+                This user is a <strong>superuser</strong> and has all permissions in the system.
+                Groups and direct permissions are shown below for reference only.
+              </p>
+            {% else %}
+              <p class="mb-3">
+                This user’s access is determined by their
+                {% if u.is_staff %}
+                  <strong>staff status</strong>
+                {% else %}
+                  <strong>standard user status</strong>
+                {% endif %}
+                and the <strong>groups</strong> and <strong>direct permissions</strong> assigned to them.
+              </p>
+            {% endif %}
+            {# Groups with structured permissions #}
+            <h3 class="h6 mt-2 mb-2">Groups</h3>
+            {% if group_permissions %}
+              <ul class="list-unstyled mb-0">
+                {% for gp in group_permissions %}
+                  <li class="mb-3">
+                    <div class="fw-semibold">{{ gp.group.name }}</div>
+                    {% if gp.sections %}
+                      <dl class="row mb-0 mt-1">
+                        {% for sec in gp.sections %}
+                          <dt class="col-4 col-sm-3 col-lg-2">{{ sec.label }}:</dt>
+                          <dd class="col-8 col-sm-9 col-lg-10">
+                            {{ sec.models|join:", " }}
+                          </dd>
+                        {% endfor %}
+                      </dl>
+                    {% else %}
+                      <div class="text-body-secondary">No permissions assigned to this group.</div>
+                    {% endif %}
+                  </li>
+                {% endfor %}
+              </ul>
+            {% else %}
+              <p class="text-body-secondary mb-0">Not a member of any groups.</p>
+            {% endif %}
+            {# Direct permissions (assigned to the user, not via groups) #}
+            {% if direct_permission_sections %}
+              <h3 class="h6 mt-4 mb-2">Direct permissions</h3>
+              <dl class="row mb-0">
+                {% for sec in direct_permission_sections %}
+                  <dt class="col-4 col-sm-3 col-lg-2">{{ sec.label }}:</dt>
+                  <dd class="col-8 col-sm-9 col-lg-10">
+                    {{ sec.models|join:", " }}
+                  </dd>
+                {% endfor %}
+              </dl>
+            {% endif %}
+          {% endwith %}
+        </div>
       </div>
     </div>
   </div>
-
-
-</div>
-
-{# SECOND ROW: School memberships (full width) #}
-<div class="row g-3 mt-2">
-  <div class="col-12">
-    <div class="card shadow-sm h-100">
-      <div class="card-header d-flex align-items-center justify-content-between">
-        <h2 class="h6 mb-0">School memberships</h2>
-        <span class="badge text-bg-light text-body-secondary">
-          {{ staff.memberships.count }} total
-        </span>
-      </div>
-
-      <div class="card-body p-0">
-
-        {# Inline Add Membership form #}
-        {% if can_add_membership and membership_form %}
-          <div class="border-bottom px-3 py-2">
-            <form method="post" class="row g-2 align-items-end">
-              {% csrf_token %}
-
-              <div class="col-12 col-sm-6 col-lg-4 col-xl-3">
-                <label for="{{ membership_form.school.id_for_label }}"
-                       class="form-label form-label-sm mb-1">School</label>
-                {{ membership_form.school }}
-                {% if membership_form.school.errors %}
-                  <div class="invalid-feedback d-block">
-                    {{ membership_form.school.errors|striptags }}
-                  </div>
-                {% endif %}
-              </div>
-
-              <div class="col-12 col-sm-6 col-lg-3 col-xl-2">
-                <label for="{{ membership_form.job_title.id_for_label }}"
-                       class="form-label form-label-sm mb-1">Job title</label>
-                {{ membership_form.job_title }}
-                {% if membership_form.job_title.errors %}
-                  <div class="invalid-feedback d-block">
-                    {{ membership_form.job_title.errors|striptags }}
-                  </div>
-                {% endif %}
-              </div>
-
-              <div class="col-12 col-sm-6 col-lg-3 col-xl-2">
-                <label for="{{ membership_form.login_role.id_for_label }}"
-                       class="form-label form-label-sm mb-1">Login role</label>
-                {{ membership_form.login_role }}
-                {% if membership_form.login_role.errors %}
-                  <div class="invalid-feedback d-block">
-                    {{ membership_form.login_role.errors|striptags }}
-                  </div>
-                {% endif %}
-              </div>
-
-              <div class="col-6 col-sm-3 col-lg-2 col-xl-2">
-                <label for="{{ membership_form.start_date.id_for_label }}"
-                       class="form-label form-label-sm mb-1">Start</label>
-                {{ membership_form.start_date }}
-                {% if membership_form.start_date.errors %}
-                  <div class="invalid-feedback d-block">
-                    {{ membership_form.start_date.errors|striptags }}
-                  </div>
-                {% endif %}
-              </div>
-
-              <div class="col-6 col-sm-3 col-lg-2 col-xl-2">
-                <label for="{{ membership_form.end_date.id_for_label }}"
-                       class="form-label form-label-sm mb-1">End</label>
-                {{ membership_form.end_date }}
-                {% if membership_form.end_date.errors %}
-                  <div class="invalid-feedback d-block">
-                    {{ membership_form.end_date.errors|striptags }}
-                  </div>
-                {% endif %}
-              </div>
-
-              <div class="col-12 col-sm-6 col-lg-auto ms-sm-auto">
-                <button type="submit" class="btn btn-sm btn-primary mt-2 mt-sm-0 w-100 w-lg-auto">
-                  Add membership
-                </button>
-              </div>
-            </form>
-          </div>
-        {% endif %}
-
-        {% if staff.memberships.all %}
-          <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-              <thead class="table-light">
-                <tr>
-                  <th scope="col">School</th>
-                  <th scope="col">Job title</th>
-                  <th scope="col">Login role</th>
-                  <th scope="col">Validity</th>
-                  <th scope="col" class="text-end">Status &amp; audit</th>
-                  {% if user.is_superuser or perms.accounts.change_staffschoolmembership or perms.accounts.delete_staffschoolmembership %}
-                    <th scope="col" class="text-end">Actions</th>
+  {# SECOND ROW: School memberships (full width) #}
+  <div class="row g-3 mt-2">
+    <div class="col-12">
+      <div class="card shadow-sm h-100">
+        <div class="card-header d-flex align-items-center justify-content-between">
+          <h2 class="h6 mb-0">School memberships</h2>
+          <span class="badge text-bg-light text-body-secondary">{{ staff.memberships.count }} total</span>
+        </div>
+        <div class="card-body p-0">
+          {# Inline Add Membership form #}
+          {% if can_add_membership and membership_form %}
+            <div class="border-bottom px-3 py-2">
+              <form method="post" class="row g-2 align-items-end">
+                {% csrf_token %}
+                <div class="col-12 col-sm-6 col-lg-4 col-xl-3">
+                  <label for="{{ membership_form.school.id_for_label }}"
+                         class="form-label form-label-sm mb-1">School</label>
+                  {{ membership_form.school }}
+                  {% if membership_form.school.errors %}
+                    <div class="invalid-feedback d-block">{{ membership_form.school.errors|striptags }}</div>
                   {% endif %}
-                </tr>
-              </thead>
-              <tbody>
-                {% for m in staff.memberships.all %}
+                </div>
+                <div class="col-12 col-sm-6 col-lg-3 col-xl-2">
+                  <label for="{{ membership_form.job_title.id_for_label }}"
+                         class="form-label form-label-sm mb-1">Job title</label>
+                  {{ membership_form.job_title }}
+                  {% if membership_form.job_title.errors %}
+                    <div class="invalid-feedback d-block">{{ membership_form.job_title.errors|striptags }}</div>
+                  {% endif %}
+                </div>
+                <div class="col-12 col-sm-6 col-lg-3 col-xl-2">
+                  <label for="{{ membership_form.login_role.id_for_label }}"
+                         class="form-label form-label-sm mb-1">Login role</label>
+                  {{ membership_form.login_role }}
+                  {% if membership_form.login_role.errors %}
+                    <div class="invalid-feedback d-block">{{ membership_form.login_role.errors|striptags }}</div>
+                  {% endif %}
+                </div>
+                <div class="col-6 col-sm-3 col-lg-2 col-xl-2">
+                  <label for="{{ membership_form.start_date.id_for_label }}"
+                         class="form-label form-label-sm mb-1">Start</label>
+                  {{ membership_form.start_date }}
+                  {% if membership_form.start_date.errors %}
+                    <div class="invalid-feedback d-block">{{ membership_form.start_date.errors|striptags }}</div>
+                  {% endif %}
+                </div>
+                <div class="col-6 col-sm-3 col-lg-2 col-xl-2">
+                  <label for="{{ membership_form.end_date.id_for_label }}"
+                         class="form-label form-label-sm mb-1">End</label>
+                  {{ membership_form.end_date }}
+                  {% if membership_form.end_date.errors %}
+                    <div class="invalid-feedback d-block">{{ membership_form.end_date.errors|striptags }}</div>
+                  {% endif %}
+                </div>
+                <div class="col-12 col-sm-6 col-lg-auto ms-sm-auto">
+                  <button type="submit"
+                          class="btn btn-sm btn-primary mt-2 mt-sm-0 w-100 w-lg-auto">Add membership</button>
+                </div>
+              </form>
+            </div>
+          {% endif %}
+          {% if staff.memberships.all %}
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
                   <tr>
-                    <td>
-                      <div class="fw-semibold">
-                        {{ m.school.emis_school_name }}
-                      </div>
-                      <div class="small text-body-secondary">
-                        {{ m.school.emis_school_no }}
-                      </div>
-                    </td>
-                    <td>
-                      {% if m.job_title %}
-                        {{ m.job_title.label }}
-                      {% else %}
-                        <span class="text-body-secondary">—</span>
-                      {% endif %}
-                    </td>
-                    <td>
-                      {% if m.login_role %}
-                        {{ m.login_role }}
-                      {% else %}
-                        <span class="text-body-secondary">—</span>
-                      {% endif %}
-                    </td>
-                    <td class="small">
-                      {% if m.start_date %}
-                        From {{ m.start_date|date:"Y-m-d" }}
-                      {% else %}
-                        From <span class="text-body-secondary">—</span>
-                      {% endif %}
-                      <br>
-                      {% if m.end_date %}
-                        To {{ m.end_date|date:"Y-m-d" }}
-                      {% else %}
-                        To <span class="text-body-secondary">open-ended</span>
-                      {% endif %}
-                    </td>
-                    <td class="text-end small">
-                      <div class="mb-1">
-                        {% if m.is_active %}
-                          <span class="badge text-bg-success">Active</span>
-                        {% else %}
-                          <span class="badge text-bg-secondary">Inactive</span>
-                        {% endif %}
-                      </div>
-
-                      {% if m.created_at %}
-                        <div class="text-body-secondary">
-                          Created {{ m.created_at|date:"Y-m-d" }}
-                          {% if m.created_by %}
-                            <span>
-                              · by {{ m.created_by.get_full_name|default:m.created_by.username }}
-                            </span>
-                          {% endif %}
-                        </div>
-                      {% endif %}
-
-                      {% if m.last_updated_at %}
-                        <div class="text-body-secondary">
-                          Updated {{ m.last_updated_at|date:"Y-m-d" }}
-                          {% if m.last_updated_by %}
-                            <span>
-                              · by {{ m.last_updated_by.get_full_name|default:m.last_updated_by.username }}
-                            </span>
-                          {% endif %}
-                        </div>
-                      {% endif %}
-                    </td>
-
+                    <th scope="col">School</th>
+                    <th scope="col">Job title</th>
+                    <th scope="col">Login role</th>
+                    <th scope="col">Validity</th>
+                    <th scope="col" class="text-end">Status &amp; audit</th>
                     {% if user.is_superuser or perms.accounts.change_staffschoolmembership or perms.accounts.delete_staffschoolmembership %}
-                      <td class="text-end">
-                        {% if user.is_superuser or perms.accounts.change_staffschoolmembership %}
-                          <a href="{% url 'accounts:staff_membership_edit' staff.pk m.pk %}"
-                             class="btn btn-sm btn-outline-secondary me-1">
-                            Edit
-                          </a>
-                        {% endif %}
-                        {% if user.is_superuser or perms.accounts.delete_staffschoolmembership %}
-                          <a href="{% url 'accounts:staff_membership_delete' staff.pk m.pk %}"
-                             class="btn btn-sm btn-outline-danger">
-                            Delete
-                          </a>
-                        {% endif %}
-                      </td>
+                      <th scope="col" class="text-end">Actions</th>
                     {% endif %}
                   </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        {% else %}
-          <div class="p-3 text-center text-body-secondary small">
-            No memberships recorded for this staff member.
-          </div>
-        {% endif %}
+                </thead>
+                <tbody>
+                  {% for m in staff.memberships.all %}
+                    <tr>
+                      <td>
+                        <div class="fw-semibold">{{ m.school.emis_school_name }}</div>
+                        <div class="small text-body-secondary">{{ m.school.emis_school_no }}</div>
+                      </td>
+                      <td>
+                        {% if m.job_title %}
+                          {{ m.job_title.label }}
+                        {% else %}
+                          <span class="text-body-secondary">—</span>
+                        {% endif %}
+                      </td>
+                      <td>
+                        {% if m.login_role %}
+                          {{ m.login_role }}
+                        {% else %}
+                          <span class="text-body-secondary">—</span>
+                        {% endif %}
+                      </td>
+                      <td class="small">
+                        {% if m.start_date %}
+                          From {{ m.start_date|date:"Y-m-d" }}
+                        {% else %}
+                          From <span class="text-body-secondary">—</span>
+                        {% endif %}
+                        <br>
+                        {% if m.end_date %}
+                          To {{ m.end_date|date:"Y-m-d" }}
+                        {% else %}
+                          To <span class="text-body-secondary">open-ended</span>
+                        {% endif %}
+                      </td>
+                      <td class="text-end small">
+                        <div class="mb-1">
+                          {% if m.is_active %}
+                            <span class="badge text-bg-success">Active</span>
+                          {% else %}
+                            <span class="badge text-bg-secondary">Inactive</span>
+                          {% endif %}
+                        </div>
+                        {% if m.created_at %}
+                          <div class="text-body-secondary">
+                            Created {{ m.created_at|date:"Y-m-d" }}
+                            {% if m.created_by %}<span>· by {{ m.created_by.get_full_name|default:m.created_by.username }}</span>{% endif %}
+                          </div>
+                        {% endif %}
+                        {% if m.last_updated_at %}
+                          <div class="text-body-secondary">
+                            Updated {{ m.last_updated_at|date:"Y-m-d" }}
+                            {% if m.last_updated_by %}
+                              <span>· by {{ m.last_updated_by.get_full_name|default:m.last_updated_by.username }}</span>
+                            {% endif %}
+                          </div>
+                        {% endif %}
+                      </td>
+                      {% if user.is_superuser or perms.accounts.change_staffschoolmembership or perms.accounts.delete_staffschoolmembership %}
+                        <td class="text-end">
+                          {% if user.is_superuser or perms.accounts.change_staffschoolmembership %}
+                            <a href="{% url 'accounts:staff_membership_edit' staff.pk m.pk %}"
+                               class="btn btn-sm btn-outline-secondary me-1">Edit</a>
+                          {% endif %}
+                          {% if user.is_superuser or perms.accounts.delete_staffschoolmembership %}
+                            <a href="{% url 'accounts:staff_membership_delete' staff.pk m.pk %}"
+                               class="btn btn-sm btn-outline-danger">Delete</a>
+                          {% endif %}
+                        </td>
+                      {% endif %}
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <div class="p-3 text-center text-body-secondary small">No memberships recorded for this staff member.</div>
+          {% endif %}
+        </div>
       </div>
     </div>
   </div>
-</div>
-
-{% endblock %}
+{% endblock content %}

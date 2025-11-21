@@ -1,5 +1,6 @@
 from accounts.models import Staff
 
+
 def staff_context(request):
     """
     Adds staff_pk_for_request_user for linking to the user's own staff page.
