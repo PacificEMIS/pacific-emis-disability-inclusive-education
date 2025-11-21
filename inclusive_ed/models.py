@@ -6,6 +6,7 @@ from django.utils.translation import gettext_lazy as _
 
 from integrations.models import EmisSchool, EmisWarehouseYear, EmisClassLevel
 
+
 class Student(models.Model):
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
@@ -21,14 +22,20 @@ class Student(models.Model):
 
     # Audit
     created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, null=True, blank=True,
-        on_delete=models.SET_NULL, related_name="students_created"
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="students_created",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     last_updated_at = models.DateTimeField(auto_now=True)
     last_updated_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, null=True, blank=True,
-        on_delete=models.SET_NULL, related_name="students_updated"
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="students_updated",
     )
 
     class Meta:
@@ -43,9 +50,9 @@ class Student(models.Model):
     @property
     def current_enrolments(self):
         today = timezone.now().date()
-        return self.enrolments.select_related("school", "class_level", "school_year").filter(
-            models.Q(end_date__isnull=True) | models.Q(end_date__gte=today)
-        )
+        return self.enrolments.select_related(
+            "school", "class_level", "school_year"
+        ).filter(models.Q(end_date__isnull=True) | models.Q(end_date__gte=today))
 
     @property
     def current_school_names(self):
@@ -72,11 +79,13 @@ EMOTIONAL_FREQ_CHOICES_5 = (
     (5, _("Never")),
 )
 
+
 class StudentSchoolEnrolment(models.Model):
     """
     One student enrolled in one school for one school_year (optionally with dates).
     All disability indicators and questionnaire 'answers' live here (they vary by year).
     """
+
     student = models.ForeignKey(
         Student, on_delete=models.CASCADE, related_name="enrolments"
     )
@@ -89,8 +98,10 @@ class StudentSchoolEnrolment(models.Model):
     )
     # Class level at this enrolment
     class_level = models.ForeignKey(
-        EmisClassLevel, on_delete=models.PROTECT, related_name="student_enrolments",
-        to_field="code"
+        EmisClassLevel,
+        on_delete=models.PROTECT,
+        related_name="student_enrolments",
+        to_field="code",
     )
 
     # Enrolment start and end date for that school year
@@ -164,21 +175,28 @@ class StudentSchoolEnrolment(models.Model):
 
     # Audit
     created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, null=True, blank=True,
-        on_delete=models.SET_NULL, related_name="student_enrolments_created"
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="student_enrolments_created",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     last_updated_at = models.DateTimeField(auto_now=True)
     last_updated_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, null=True, blank=True,
-        on_delete=models.SET_NULL, related_name="student_enrolments_updated"
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="student_enrolments_updated",
     )
 
     class Meta:
         # One row per (student, school, year) — prevents dup enrolments in same year/school
         constraints = [
             models.UniqueConstraint(
-                fields=["student", "school", "school_year"], name="uq_student_school_year"
+                fields=["student", "school", "school_year"],
+                name="uq_student_school_year",
             ),
         ]
         indexes = [
@@ -196,15 +214,20 @@ class StudentSchoolEnrolment(models.Model):
         today = timezone.now().date()
         return self.end_date is None or self.end_date >= today
 
+
 class PermissionsAnchor(models.Model):
     """
     Dummy model that only exists to host app-level custom permissions.
     """
+
     class Meta:
         managed = False
         default_permissions = ()
         verbose_name = "Disability-Inclusive Education app"
         verbose_name_plural = "Disability-Inclusive Education app"
         permissions = (
-            ("access_inclusive_ed", "Can access the Disability-Inclusive Education app"),
+            (
+                "access_inclusive_ed",
+                "Can access the Disability-Inclusive Education app",
+            ),
         )

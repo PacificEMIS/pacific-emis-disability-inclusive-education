@@ -1,35 +1,34 @@
+{# djlint:off H021 #}
 {% extends "emails/base_email.html" %}
-
 {% block subject %}
-{{ emis_context }} Disability Inclusive Education: New disability record created for {{ student.first_name }} {{ student.last_name }}
+  {{ emis_context }} Disability Inclusive Education: New disability record created for {{ student.first_name }} {{ student.last_name }}
 {% endblock subject %}
-
 {% block header_title %}
-{{ emis_context }} Disability Inclusive Education: New disability record created
+  {{ emis_context }} Disability Inclusive Education: New disability record created
 {% endblock header_title %}
-
 {% block body_intro %}
   <p>
-    Hello{% if created_by %} {{ created_by.get_full_name|default:created_by.username }}{% endif %},
+    Hello
+    {% if created_by %}{{ created_by.get_full_name|default:created_by.username }}{% endif %}
+    ,
   </p>
-
   <p>
-    A new student disability record has been created in the {{ emis_context }} Disability Inclusive 
-    Education app{% if enrolment and enrolment.school %} for
-    <strong>{{ enrolment.school.emis_school_name }}</strong>{% endif %}.
+    A new student disability record has been created in the {{ emis_context }} Disability Inclusive
+    Education app
+    {% if enrolment and enrolment.school %}
+      for
+      <strong>{{ enrolment.school.emis_school_name }}</strong>
+    {% endif %}
+    .
   </p>
 {% endblock body_intro %}
-
 {% block body_main %}
-
   {# --- Student details --- #}
   <p class="ie-meta">Student details</p>
-
   <p class="ie-kv">
     <span class="ie-kv-label">Name:</span>
     {{ student.first_name }} {{ student.last_name }}
   </p>
-
   <p class="ie-kv">
     <span class="ie-kv-label">Date of birth:</span>
     {% if student.date_of_birth %}
@@ -38,232 +37,225 @@
       <span class="ie-muted">Not recorded</span>
     {% endif %}
   </p>
-
   <p class="ie-kv">
     <span class="ie-kv-label">School:</span>
     {% if enrolment and enrolment.school %}
       {{ enrolment.school.emis_school_name }}
-      <span class="ie-muted">({{ enrolment.school.emis_school_no }})</span><br/>
+      <span class="ie-muted">({{ enrolment.school.emis_school_no }})</span>
+      <br />
     {% endif %}
     {% if enrolment and enrolment.school_year %}
       <span class="ie-kv-label">School year:</span>
-      {{ enrolment.school_year.label }}<br/>
+      {{ enrolment.school_year.label }}
+      <br />
     {% endif %}
     {% if enrolment and enrolment.class_level %}
       <span class="ie-kv-label">Class level:</span>
-      {{ enrolment.class_level.label }}<br/>
+      {{ enrolment.class_level.label }}
+      <br />
     {% endif %}
   </p>
-
   <p class="ie-kv">
     <span class="ie-kv-label">Created by:</span>
     {% if created_by %}
       {{ created_by.get_full_name|default:created_by.username }}
-      <span class="ie-muted">(username: {{ created_by.username }})</span><br/>
+      <span class="ie-muted">(username: {{ created_by.username }})</span>
+      <br />
     {% endif %}
     {% if enrolment %}
       <span class="ie-kv-label">Created on</span>
       {{ enrolment.created_at|date:"Y-m-d H:i" }}
     {% endif %}
   </p>
-
   <div class="ie-spacer"></div>
   <hr style="border:none;border-top:1px solid #dee2e6;margin:12px 0;" />
-
   {# --- Disability questionnaire overview --- #}
   <p class="ie-meta">Disability questionnaire overview</p>
   <p class="ie-muted" style="font-size:12px;margin-top:0;">
     This is a summary of the recoded data for this. For full details on the sutdent, open the
     record online with the button button below or loging and find the student.
   </p>
-
   <div class="ie-spacer"></div>
-
   {% if enrolment %}
-  <p class="ie-meta">Key indicators (all 20 CFT items)</p>
-
-  {# SEEING: CFT1–3 #}
-  <p class="ie-kv">
-    <span class="ie-kv-label">Seeing:</span><br/>
-    Wears glasses / contacts (CFT1):
-    {% if enrolment.cft1_wears_glasses is not None %}
-      {{ enrolment.get_cft1_wears_glasses_display }}
-    {% else %}
-      <span class="ie-muted">Not recorded</span>
-    {% endif %}<br/>
-
-    Difficulty seeing with glasses (CFT2):
-    {% if enrolment.cft2_difficulty_seeing_with_glasses is not None %}
-      {{ enrolment.get_cft2_difficulty_seeing_with_glasses_display }}
-    {% else %}
-      <span class="ie-muted">Not recorded</span>
-    {% endif %}<br/>
-
-    Difficulty seeing overall (CFT3):
-    {% if enrolment.cft3_difficulty_seeing is not None %}
-      {{ enrolment.get_cft3_difficulty_seeing_display }}
-    {% else %}
-      <span class="ie-muted">Not recorded</span>
-    {% endif %}
-  </p>
-
-  {# HEARING: CFT4–6 #}
-  <p class="ie-kv">
-    <span class="ie-kv-label">Hearing:</span><br/>
-    Uses hearing aid (CFT4):
-    {% if enrolment.cft4_has_hearing_aids is not None %}
-      {{ enrolment.get_cft4_has_hearing_aids_display }}
-    {% else %}
-      <span class="ie-muted">Not recorded</span>
-    {% endif %}<br/>
-
-    Difficulty hearing with aid (CFT5):
-    {% if enrolment.cft5_difficulty_hearing_with_aids is not None %}
-      {{ enrolment.get_cft5_difficulty_hearing_with_aids_display }}
-    {% else %}
-      <span class="ie-muted">Not recorded</span>
-    {% endif %}<br/>
-
-    Difficulty hearing overall (CFT6):
-    {% if enrolment.cft6_difficulty_hearing is not None %}
-      {{ enrolment.get_cft6_difficulty_hearing_display }}
-    {% else %}
-      <span class="ie-muted">Not recorded</span>
-    {% endif %}
-  </p>
-
-  {# MOBILITY & FINE MOTOR: CFT7–11 #}
-  <p class="ie-kv">
-    <span class="ie-kv-label">Mobility &amp; fine motor:</span><br/>
-    Uses walking equipment / assistance (CFT7):
-    {% if enrolment.cft7_uses_walking_equipment is not None %}
-      {{ enrolment.get_cft7_uses_walking_equipment_display }}
-    {% else %}
-      <span class="ie-muted">Not recorded</span>
-    {% endif %}<br/>
-
-    Difficulty walking without equipment (CFT8):
-    {% if enrolment.cft8_difficulty_walking_without_equipment is not None %}
-      {{ enrolment.get_cft8_difficulty_walking_without_equipment_display }}
-    {% else %}
-      <span class="ie-muted">Not recorded</span>
-    {% endif %}<br/>
-
-    Difficulty walking with equipment (CFT9):
-    {% if enrolment.cft9_difficulty_walking_with_equipment is not None %}
-      {{ enrolment.get_cft9_difficulty_walking_with_equipment_display }}
-    {% else %}
-      <span class="ie-muted">Not recorded</span>
-    {% endif %}<br/>
-
-    Walking compared to same-age peers (CFT10):
-    {% if enrolment.cft10_difficulty_walking_compare_to_others is not None %}
-      {{ enrolment.get_cft10_difficulty_walking_compare_to_others_display }}
-    {% else %}
-      <span class="ie-muted">Not recorded</span>
-    {% endif %}<br/>
-
-    Picking up small objects (CFT11):
-    {% if enrolment.cft11_difficulty_picking_up_small_objects is not None %}
-      {{ enrolment.get_cft11_difficulty_picking_up_small_objects_display }}
-    {% else %}
-      <span class="ie-muted">Not recorded</span>
-    {% endif %}
-  </p>
-
-  {# COMMUNICATION & LEARNING: CFT12–16 #}
-  <p class="ie-kv">
-    <span class="ie-kv-label">Communication &amp; learning:</span><br/>
-    Being understood by others (CFT12):
-    {% if enrolment.cft12_difficulty_being_understood is not None %}
-      {{ enrolment.get_cft12_difficulty_being_understood_display }}
-    {% else %}
-      <span class="ie-muted">Not recorded</span>
-    {% endif %}<br/>
-
-    Learning (CFT13):
-    {% if enrolment.cft13_difficulty_learning is not None %}
-      {{ enrolment.get_cft13_difficulty_learning_display }}
-    {% else %}
-      <span class="ie-muted">Not recorded</span>
-    {% endif %}<br/>
-
-    Remembering (CFT14):
-    {% if enrolment.cft14_difficulty_remembering is not None %}
-      {{ enrolment.get_cft14_difficulty_remembering_display }}
-    {% else %}
-      <span class="ie-muted">Not recorded</span>
-    {% endif %}<br/>
-
-    Concentrating (CFT15):
-    {% if enrolment.cft15_difficulty_concentrating is not None %}
-      {{ enrolment.get_cft15_difficulty_concentrating_display }}
-    {% else %}
-      <span class="ie-muted">Not recorded</span>
-    {% endif %}<br/>
-
-    Accepting change in routine (CFT16):
-    {% if enrolment.cft16_difficulty_accepting_change is not None %}
-      {{ enrolment.get_cft16_difficulty_accepting_change_display }}
-    {% else %}
-      <span class="ie-muted">Not recorded</span>
-    {% endif %}
-  </p>
-
-  {# BEHAVIOUR & SOCIAL: CFT17–18 #}
-  <p class="ie-kv">
-    <span class="ie-kv-label">Behaviour &amp; social:</span><br/>
-    Controlling behaviour (CFT17):
-    {% if enrolment.cft17_difficulty_controlling_behaviour is not None %}
-      {{ enrolment.get_cft17_difficulty_controlling_behaviour_display }}
-    {% else %}
-      <span class="ie-muted">Not recorded</span>
-    {% endif %}<br/>
-
-    Making friends (CFT18):
-    {% if enrolment.cft18_difficulty_making_friends is not None %}
-      {{ enrolment.get_cft18_difficulty_making_friends_display }}
-    {% else %}
-      <span class="ie-muted">Not recorded</span>
-    {% endif %}
-  </p>
-
-  {# EMOTIONAL: CFT19–20 #}
-  <p class="ie-kv">
-    <span class="ie-kv-label">Emotional:</span><br/>
-    Anxiety (CFT19):
-    {% if enrolment.cft19_anxious_frequency is not None %}
-      {{ enrolment.get_cft19_anxious_frequency_display }}
-    {% else %}
-      <span class="ie-muted">Not recorded</span>
-    {% endif %}<br/>
-
-    Depression (CFT20):
-    {% if enrolment.cft20_depressed_frequency is not None %}
-      {{ enrolment.get_cft20_depressed_frequency_display }}
-    {% else %}
-      <span class="ie-muted">Not recorded</span>
-    {% endif %}
-  </p>
-{% endif %}
-
+    <p class="ie-meta">Key indicators (all 20 CFT items)</p>
+    {# SEEING: CFT1–3 #}
+    <p class="ie-kv">
+      <span class="ie-kv-label">Seeing:</span>
+      <br />
+      Wears glasses / contacts (CFT1):
+      {% if enrolment.cft1_wears_glasses is not None %}
+        {{ enrolment.get_cft1_wears_glasses_display }}
+      {% else %}
+        <span class="ie-muted">Not recorded</span>
+      {% endif %}
+      <br />
+      Difficulty seeing with glasses (CFT2):
+      {% if enrolment.cft2_difficulty_seeing_with_glasses is not None %}
+        {{ enrolment.get_cft2_difficulty_seeing_with_glasses_display }}
+      {% else %}
+        <span class="ie-muted">Not recorded</span>
+      {% endif %}
+      <br />
+      Difficulty seeing overall (CFT3):
+      {% if enrolment.cft3_difficulty_seeing is not None %}
+        {{ enrolment.get_cft3_difficulty_seeing_display }}
+      {% else %}
+        <span class="ie-muted">Not recorded</span>
+      {% endif %}
+    </p>
+    {# HEARING: CFT4–6 #}
+    <p class="ie-kv">
+      <span class="ie-kv-label">Hearing:</span>
+      <br />
+      Uses hearing aid (CFT4):
+      {% if enrolment.cft4_has_hearing_aids is not None %}
+        {{ enrolment.get_cft4_has_hearing_aids_display }}
+      {% else %}
+        <span class="ie-muted">Not recorded</span>
+      {% endif %}
+      <br />
+      Difficulty hearing with aid (CFT5):
+      {% if enrolment.cft5_difficulty_hearing_with_aids is not None %}
+        {{ enrolment.get_cft5_difficulty_hearing_with_aids_display }}
+      {% else %}
+        <span class="ie-muted">Not recorded</span>
+      {% endif %}
+      <br />
+      Difficulty hearing overall (CFT6):
+      {% if enrolment.cft6_difficulty_hearing is not None %}
+        {{ enrolment.get_cft6_difficulty_hearing_display }}
+      {% else %}
+        <span class="ie-muted">Not recorded</span>
+      {% endif %}
+    </p>
+    {# MOBILITY & FINE MOTOR: CFT7–11 #}
+    <p class="ie-kv">
+      <span class="ie-kv-label">Mobility &amp; fine motor:</span>
+      <br />
+      Uses walking equipment / assistance (CFT7):
+      {% if enrolment.cft7_uses_walking_equipment is not None %}
+        {{ enrolment.get_cft7_uses_walking_equipment_display }}
+      {% else %}
+        <span class="ie-muted">Not recorded</span>
+      {% endif %}
+      <br />
+      Difficulty walking without equipment (CFT8):
+      {% if enrolment.cft8_difficulty_walking_without_equipment is not None %}
+        {{ enrolment.get_cft8_difficulty_walking_without_equipment_display }}
+      {% else %}
+        <span class="ie-muted">Not recorded</span>
+      {% endif %}
+      <br />
+      Difficulty walking with equipment (CFT9):
+      {% if enrolment.cft9_difficulty_walking_with_equipment is not None %}
+        {{ enrolment.get_cft9_difficulty_walking_with_equipment_display }}
+      {% else %}
+        <span class="ie-muted">Not recorded</span>
+      {% endif %}
+      <br />
+      Walking compared to same-age peers (CFT10):
+      {% if enrolment.cft10_difficulty_walking_compare_to_others is not None %}
+        {{ enrolment.get_cft10_difficulty_walking_compare_to_others_display }}
+      {% else %}
+        <span class="ie-muted">Not recorded</span>
+      {% endif %}
+      <br />
+      Picking up small objects (CFT11):
+      {% if enrolment.cft11_difficulty_picking_up_small_objects is not None %}
+        {{ enrolment.get_cft11_difficulty_picking_up_small_objects_display }}
+      {% else %}
+        <span class="ie-muted">Not recorded</span>
+      {% endif %}
+    </p>
+    {# COMMUNICATION & LEARNING: CFT12–16 #}
+    <p class="ie-kv">
+      <span class="ie-kv-label">Communication &amp; learning:</span>
+      <br />
+      Being understood by others (CFT12):
+      {% if enrolment.cft12_difficulty_being_understood is not None %}
+        {{ enrolment.get_cft12_difficulty_being_understood_display }}
+      {% else %}
+        <span class="ie-muted">Not recorded</span>
+      {% endif %}
+      <br />
+      Learning (CFT13):
+      {% if enrolment.cft13_difficulty_learning is not None %}
+        {{ enrolment.get_cft13_difficulty_learning_display }}
+      {% else %}
+        <span class="ie-muted">Not recorded</span>
+      {% endif %}
+      <br />
+      Remembering (CFT14):
+      {% if enrolment.cft14_difficulty_remembering is not None %}
+        {{ enrolment.get_cft14_difficulty_remembering_display }}
+      {% else %}
+        <span class="ie-muted">Not recorded</span>
+      {% endif %}
+      <br />
+      Concentrating (CFT15):
+      {% if enrolment.cft15_difficulty_concentrating is not None %}
+        {{ enrolment.get_cft15_difficulty_concentrating_display }}
+      {% else %}
+        <span class="ie-muted">Not recorded</span>
+      {% endif %}
+      <br />
+      Accepting change in routine (CFT16):
+      {% if enrolment.cft16_difficulty_accepting_change is not None %}
+        {{ enrolment.get_cft16_difficulty_accepting_change_display }}
+      {% else %}
+        <span class="ie-muted">Not recorded</span>
+      {% endif %}
+    </p>
+    {# BEHAVIOUR & SOCIAL: CFT17–18 #}
+    <p class="ie-kv">
+      <span class="ie-kv-label">Behaviour &amp; social:</span>
+      <br />
+      Controlling behaviour (CFT17):
+      {% if enrolment.cft17_difficulty_controlling_behaviour is not None %}
+        {{ enrolment.get_cft17_difficulty_controlling_behaviour_display }}
+      {% else %}
+        <span class="ie-muted">Not recorded</span>
+      {% endif %}
+      <br />
+      Making friends (CFT18):
+      {% if enrolment.cft18_difficulty_making_friends is not None %}
+        {{ enrolment.get_cft18_difficulty_making_friends_display }}
+      {% else %}
+        <span class="ie-muted">Not recorded</span>
+      {% endif %}
+    </p>
+    {# EMOTIONAL: CFT19–20 #}
+    <p class="ie-kv">
+      <span class="ie-kv-label">Emotional:</span>
+      <br />
+      Anxiety (CFT19):
+      {% if enrolment.cft19_anxious_frequency is not None %}
+        {{ enrolment.get_cft19_anxious_frequency_display }}
+      {% else %}
+        <span class="ie-muted">Not recorded</span>
+      {% endif %}
+      <br />
+      Depression (CFT20):
+      {% if enrolment.cft20_depressed_frequency is not None %}
+        {{ enrolment.get_cft20_depressed_frequency_display }}
+      {% else %}
+        <span class="ie-muted">Not recorded</span>
+      {% endif %}
+    </p>
+  {% endif %}
 {% endblock body_main %}
-
 {% block body_cta %}
   {% if student_url %}
     <p style="margin: 0 0 16px 0;">
       <a href="{{ student_url }}"
-         style="
-           display:inline-block;
-           padding:8px 14px;
-           border-radius:999px;
-           background-color:#0d6efd;
-           color:#ffffff !important;
-           text-decoration:none;
-           font-size:13px;
-         ">
-        Open this record online
-      </a>
+         style="display:inline-block;
+                padding:8px 14px;
+                border-radius:999px;
+                background-color:#0d6efd;
+                color:#ffffff !important;
+                text-decoration:none;
+                font-size:13px">Open this record online</a>
     </p>
   {% endif %}
 {% endblock body_cta %}
+{# djlint:on #}

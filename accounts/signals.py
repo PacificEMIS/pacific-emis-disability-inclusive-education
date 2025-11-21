@@ -6,9 +6,11 @@ from accounts.models import Staff
 
 User = get_user_model()
 
+
 @receiver(user_signed_up)
 def create_staff_on_signup(request, user, **kwargs):
     Staff.objects.get_or_create(user=user)
+
 
 # Optional: backfill for existing users who log in
 @receiver(user_logged_in)

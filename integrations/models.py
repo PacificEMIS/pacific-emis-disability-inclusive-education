@@ -1,5 +1,6 @@
 from django.db import models
 
+
 class EmisSchool(models.Model):
     emis_school_no = models.CharField(max_length=32, primary_key=True)
     emis_school_name = models.CharField(max_length=255)
@@ -13,8 +14,10 @@ class EmisSchool(models.Model):
 
 
 class EmisClassLevel(models.Model):
-    code = models.CharField(max_length=16, primary_key=True)   # from core.lookups.levels.C
-    label = models.CharField(max_length=128)                   # from core.lookups.levels.N
+    code = models.CharField(
+        max_length=16, primary_key=True
+    )  # from core.lookups.levels.C
+    label = models.CharField(max_length=128)  # from core.lookups.levels.N
     active = models.BooleanField(default=True)
 
     class Meta:
@@ -23,13 +26,17 @@ class EmisClassLevel(models.Model):
     def __str__(self):
         return f"{self.code} — {self.label}"
 
+
 class EmisJobTitle(models.Model):
     """
     Lookup table for teacher roles / job titles.
     Mirrors core.lookups.teacherRoles.
     """
-    code = models.CharField(max_length=16, primary_key=True)   # from core.lookups.teacherRoles.C
-    label = models.CharField(max_length=128)                   # from core.lookups.teacherRoles.N
+
+    code = models.CharField(
+        max_length=16, primary_key=True
+    )  # from core.lookups.teacherRoles.C
+    label = models.CharField(max_length=128)  # from core.lookups.teacherRoles.N
     active = models.BooleanField(default=True)
 
     class Meta:
@@ -39,13 +46,19 @@ class EmisJobTitle(models.Model):
 
     def __str__(self):
         return f"{self.code} — {self.label}"
-    
+
+
 class EmisWarehouseYear(models.Model):
     """
     Lookup table for warehouse years (with school year formatted)
     """
-    code = models.CharField(max_length=16, primary_key=True)   # from core.lookups.warehouseYears.C
-    label = models.CharField(max_length=128)                   # from core.lookups.warehouseYears.FormattedYear
+
+    code = models.CharField(
+        max_length=16, primary_key=True
+    )  # from core.lookups.warehouseYears.C
+    label = models.CharField(
+        max_length=128
+    )  # from core.lookups.warehouseYears.FormattedYear
     active = models.BooleanField(default=True)
 
     class Meta:

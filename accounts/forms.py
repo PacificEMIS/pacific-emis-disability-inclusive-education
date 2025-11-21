@@ -3,6 +3,7 @@ from django.forms import ModelForm
 
 from accounts.models import StaffSchoolMembership
 
+
 class StaffSchoolMembershipForm(ModelForm):
     class Meta:
         model = StaffSchoolMembership

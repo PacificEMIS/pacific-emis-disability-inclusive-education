@@ -2,6 +2,7 @@ import time
 import requests
 from django.conf import settings
 
+
 class EmisClient:
     """Tiny helper for EMIS Core API (password-grant)."""
 
@@ -19,9 +20,12 @@ class EmisClient:
             "username": self.cfg["USERNAME"],
             "password": self.cfg["PASSWORD"],
         }
-        r = requests.post(self.cfg["LOGIN_URL"], data=data,
-                          timeout=self.cfg["TIMEOUT_SECONDS"],
-                          verify=self.cfg["VERIFY_SSL"])
+        r = requests.post(
+            self.cfg["LOGIN_URL"],
+            data=data,
+            timeout=self.cfg["TIMEOUT_SECONDS"],
+            verify=self.cfg["VERIFY_SSL"],
+        )
         r.raise_for_status()
         payload = r.json()
         self._token = payload.get("access_token") or payload.get("accessToken")

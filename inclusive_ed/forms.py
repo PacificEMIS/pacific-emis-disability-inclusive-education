@@ -4,21 +4,28 @@ from integrations.models import EmisSchool, EmisWarehouseYear, EmisClassLevel
 from inclusive_ed.models import Student, StudentSchoolEnrolment
 from inclusive_ed.cft_meta import CFT_QUESTION_META
 
+
 class StudentCoreForm(forms.ModelForm):
     """
     Minimal editable fields for a Student profile.
     Used on the student_edit view.
     """
+
     class Meta:
         model = Student
         fields = ["first_name", "last_name", "date_of_birth"]
         widgets = {
-            "first_name": forms.TextInput(attrs={"class": "form-control form-control-sm"}),
-            "last_name": forms.TextInput(attrs={"class": "form-control form-control-sm"}),
+            "first_name": forms.TextInput(
+                attrs={"class": "form-control form-control-sm"}
+            ),
+            "last_name": forms.TextInput(
+                attrs={"class": "form-control form-control-sm"}
+            ),
             "date_of_birth": forms.DateInput(
                 attrs={"type": "date", "class": "form-control form-control-sm"}
             ),
         }
+
 
 class StudentDisabilityIntakeForm(forms.Form):
     """
@@ -74,9 +81,7 @@ class StudentDisabilityIntakeForm(forms.Form):
 
         # Default school_year to latest by code
         if not self.initial.get("school_year"):
-            current_year = (
-                EmisWarehouseYear.objects.all().order_by("-code").first()
-            )
+            current_year = EmisWarehouseYear.objects.all().order_by("-code").first()
             if current_year:
                 self.initial["school_year"] = current_year
                 self.fields["school_year"].initial = current_year
@@ -104,6 +109,7 @@ class StudentDisabilityIntakeForm(forms.Form):
                 data[field_name] = val
         return data
 
+
 class StudentEnrolmentForm(forms.ModelForm):
     """
     Used for:
@@ -116,8 +122,11 @@ class StudentEnrolmentForm(forms.ModelForm):
     class Meta:
         model = StudentSchoolEnrolment
         fields = [
-            "school", "school_year", "class_level",
-            "start_date", "end_date",
+            "school",
+            "school_year",
+            "class_level",
+            "start_date",
+            "end_date",
             "cft1_wears_glasses",
             "cft2_difficulty_seeing_with_glasses",
             "cft3_difficulty_seeing",
@@ -160,5 +169,5 @@ class StudentEnrolmentForm(forms.ModelForm):
             if name.startswith("cft"):
                 existing = field.widget.attrs.get("class", "")
                 field.widget.attrs["class"] = (
-                    (existing + " form-select form-select-sm").strip()
-                )
+                    existing + " form-select form-select-sm"
+                ).strip()

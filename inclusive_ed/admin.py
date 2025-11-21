@@ -3,6 +3,7 @@ from inclusive_ed.models import Student, StudentSchoolEnrolment
 
 from accounts.mixins import CreatedUpdatedAuditMixin
 
+
 # Inline to edit a student's school/year enrolments (with 20 CFT disability fields)
 class StudentSchoolEnrolmentInline(admin.TabularInline):
     model = StudentSchoolEnrolment
@@ -11,9 +12,11 @@ class StudentSchoolEnrolmentInline(admin.TabularInline):
     autocomplete_fields = ("school", "school_year", "class_level")
 
     fields = (
-        "school", "school_year", "class_level",
-        "start_date", "end_date",
-
+        "school",
+        "school_year",
+        "class_level",
+        "start_date",
+        "end_date",
         # CFT 1–20 fields
         "cft1_wears_glasses",
         "cft2_difficulty_seeing_with_glasses",
@@ -35,15 +38,20 @@ class StudentSchoolEnrolmentInline(admin.TabularInline):
         "cft18_difficulty_making_friends",
         "cft19_anxious_frequency",
         "cft20_depressed_frequency",
-
         # audit
-        "created_at", "created_by", "last_updated_at", "last_updated_by",
+        "created_at",
+        "created_by",
+        "last_updated_at",
+        "last_updated_by",
     )
 
     readonly_fields = (
-        "created_at", "created_by",
-        "last_updated_at", "last_updated_by",
+        "created_at",
+        "created_by",
+        "last_updated_at",
+        "last_updated_by",
     )
+
 
 @admin.register(Student)
 class StudentAdmin(CreatedUpdatedAuditMixin, admin.ModelAdmin):
@@ -72,10 +80,12 @@ class StudentAdmin(CreatedUpdatedAuditMixin, admin.ModelAdmin):
         # Uses the @property current_enrolments you added on Student
         names = [e.school.emis_school_name for e in obj.current_enrolments]
         return ", ".join(names) if names else "—"
+
     current_school_names.short_description = "Current schools"
 
     def active_enrolments_count(self, obj):
         return obj.current_enrolments.count()
+
     active_enrolments_count.short_description = "Active enrolments"
 
 

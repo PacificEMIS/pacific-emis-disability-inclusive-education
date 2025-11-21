@@ -15,6 +15,7 @@ GROUP_INCLUSIVE_TEACHERS = "InclusiveEd - Teachers"
 
 # ---- Role helpers -----------------------------------------------------------
 
+
 def _in_group(user, group_name: str) -> bool:
     if not user or not user.is_authenticated:
         return False
@@ -39,7 +40,9 @@ def is_inclusive_teacher(user) -> bool:
     """Per-school restricted; can add/edit (no delete)."""
     return _in_group(user, GROUP_INCLUSIVE_TEACHERS)
 
+
 # ---- User ↔ School helpers --------------------------------------------------
+
 
 def get_user_schools(user):
     """
@@ -58,16 +61,14 @@ def get_user_schools(user):
     #   staff.user -> AUTH_USER
     #   school -> EmisSchool (related_name="memberships")
     #   end_date (nullable)
-    return (
-        EmisSchool.objects.filter(
-            memberships__staff__user=user,
-            memberships__end_date__isnull=True,
-        )
-        .distinct()
-    )
+    return EmisSchool.objects.filter(
+        memberships__staff__user=user,
+        memberships__end_date__isnull=True,
+    ).distinct()
 
 
 # ---- Student ↔ School helpers ----------------------------------------------
+
 
 def get_effective_student_schools(student: Student):
     """
@@ -86,28 +87,23 @@ def get_effective_student_schools(student: Student):
     # 1) Try current_enrolments (you already defined this property on Student)
     current = student.current_enrolments
     if current.exists():
-        return EmisSchool.objects.filter(
-            pk__in=current.values("school_id")
-        ).distinct()
+        return EmisSchool.objects.filter(pk__in=current.values("school_id")).distinct()
 
     # 2) No current enrolments → fall back to latest enrolment
     all_enrolments = student.enrolments.select_related("school_year", "school")
     if not all_enrolments.exists():
         return EmisSchool.objects.none()
 
-    latest = (
-        all_enrolments
-        .order_by(
-            "-school_year__code",  # newest school year first
-            "-start_date",         # then by start date if present
-            "-pk",                 # stable tiebreaker
-        )
-        .first()
-    )
+    latest = all_enrolments.order_by(
+        "-school_year__code",  # newest school year first
+        "-start_date",  # then by start date if present
+        "-pk",  # stable tiebreaker
+    ).first()
     return EmisSchool.objects.filter(pk=latest.school_id)
 
 
 # ---- Core access check: user ↔ student via schools -------------------------
+
 
 def user_has_school_access_to_student(user, student: Student) -> bool:
     """
@@ -137,6 +133,7 @@ def user_has_school_access_to_student(user, student: Student) -> bool:
 
 # ---- Convenience helpers we’ll use in views later --------------------------
 
+
 def can_create_student(user) -> bool:
     """
     Who can *create* a student (profile/enrolments/disability)?
@@ -153,6 +150,7 @@ def can_create_student(user) -> bool:
     if is_inclusive_teacher(user):
         return True
     return False
+
 
 def can_view_student(user, student: Student) -> bool:
     """
@@ -198,6 +196,7 @@ def can_delete_student(user, student: Student) -> bool:
         return False
     return user.is_superuser or is_inclusive_admin(user)
 
+
 def filter_students_for_user(qs: QuerySet, user) -> QuerySet:
     """
     Apply row-level access rules to a Student queryset *for the list view*,
@@ -226,14 +225,13 @@ def filter_students_for_user(qs: QuerySet, user) -> QuerySet:
 
     # We restrict by emis_school_no because the list queryset already
     # annotates latest_school_no from the latest enrolment.
-    allowed_school_nos = list(
-        user_schools.values_list("emis_school_no", flat=True)
-    )
+    allowed_school_nos = list(user_schools.values_list("emis_school_no", flat=True))
 
     if not allowed_school_nos:
         return qs.none()
 
     return qs.filter(latest_school_no__in=allowed_school_nos)
+
 
 def get_allowed_enrolment_schools(user):
     """

@@ -1,267 +1,160 @@
 {% extends "base.html" %}
 {% load form_extras cft_display static %}
-{% block title %}Record new disability{% endblock %}
-
+{% block title %}
+  Record new disability
+{% endblock title %}
 {% block content %}
-
-<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-  <div>
-    <h1 class="h4 mb-0">Record new disability</h1>
-    <div class="small text-body-secondary">
-      Create a student and record their disability information for a specific school, year, and class level.
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <div>
+      <h1 class="h4 mb-0">Record new disability</h1>
+      <div class="small text-body-secondary">
+        Create a student and record their disability information for a specific school, year, and class level.
+      </div>
+    </div>
+    <div>
+      <a href="{% url 'inclusive_ed:student_list' %}"
+         class="btn btn-sm btn-outline-secondary">← Back to students</a>
     </div>
   </div>
-  <div>
-    <a href="{% url 'inclusive_ed:student_list' %}" class="btn btn-sm btn-outline-secondary">
-      &larr; Back to students
-    </a>
-  </div>
-</div>
-
-<div class="card shadow-sm mb-3">
-  <div class="card-body">
-    <form method="post" novalidate>
-      {% csrf_token %}
-
-      <div class="row g-3">
-        <!-- Student core -->
-        <div class="col-12 col-lg-6">
-          <h2 class="h6 mb-2">Student details</h2>
-
-          <div class="row g-2">
-            <div class="col-12 col-md-6">
-              <label for="{{ form.first_name.id_for_label }}" class="form-label form-label-sm mb-1">
-                First name
-              </label>
-              {{ form.first_name }}
-              {% if form.first_name.errors %}
-                <div class="invalid-feedback d-block">
-                  {{ form.first_name.errors|striptags }}
-                </div>
-              {% endif %}
-            </div>
-
-            <div class="col-12 col-md-6">
-              <label for="{{ form.last_name.id_for_label }}" class="form-label form-label-sm mb-1">
-                Last name
-              </label>
-              {{ form.last_name }}
-              {% if form.last_name.errors %}
-                <div class="invalid-feedback d-block">
-                  {{ form.last_name.errors|striptags }}
-                </div>
-              {% endif %}
-            </div>
-
-            <div class="col-12 col-md-6">
-              <label for="{{ form.date_of_birth.id_for_label }}" class="form-label form-label-sm mb-1">
-                Date of birth
-              </label>
-              {{ form.date_of_birth }}
-              {% if form.date_of_birth.errors %}
-                <div class="invalid-feedback d-block">
-                  {{ form.date_of_birth.errors|striptags }}
-                </div>
-              {% endif %}
-            </div>
-          </div>
-
-          <!-- Possible matches -->
-          <div id="student-matches" class="mt-3 d-none">
-            <div class="alert alert-warning p-2 small mb-0">
-              <div class="fw-semibold mb-1">
-                Possible existing students found
-              </div>
-              <p class="mb-2">
-                These students look similar to the one you are entering. Please check if one of them
-                is the same student before creating a new record. If the same record, you should browse
-                to that student's record and update that rather than creating new record.
-              </p>
-              <ul class="list-unstyled mb-0" id="student-matches-list"></ul>
-            </div>
-          </div>
-        </div>
-
-        <!-- Enrolment core -->
-        <div class="col-12 col-lg-6">
-          <h2 class="h6 mb-2">Enrolment context</h2>
-
-          <div class="row g-2">
-            <div class="col-12">
-              <label for="{{ form.school.id_for_label }}" class="form-label form-label-sm mb-1">
-                School
-              </label>
-              {{ form.school }}
-              {% if form.school.errors %}
-                <div class="invalid-feedback d-block">
-                  {{ form.school.errors|striptags }}
-                </div>
-              {% endif %}
-            </div>
-
-            <div class="col-6">
-              <label for="{{ form.school_year.id_for_label }}" class="form-label form-label-sm mb-1">
-                School year
-              </label>
-              {{ form.school_year }}
-              {% if form.school_year.errors %}
-                <div class="invalid-feedback d-block">
-                  {{ form.school_year.errors|striptags }}
-                </div>
-              {% endif %}
-            </div>
-
-            <div class="col-6">
-              <label for="{{ form.class_level.id_for_label }}" class="form-label form-label-sm mb-1">
-                Class level
-              </label>
-              {{ form.class_level }}
-              {% if form.class_level.errors %}
-                <div class="invalid-feedback d-block">
-                  {{ form.class_level.errors|striptags }}
-                </div>
-              {% endif %}
-            </div>
-          </div>
-
-          <p class="small text-body-secondary mt-2 mb-0">
-            We (optionally) support tracking changing disability data over time. 
-            That is why we record basic details about the student's enrolment.
-          </p>
-        </div>
-      </div>
-
-      <hr class="my-3">
-
-      <!-- Disability & questionnaire -->
-      <h2 class="h6 mb-2">Disability questionnaire</h2>
-      <p class="small text-body-secondary mb-3">
-        Select any of the below to record a possible disability.
-      </p>
-
-      <div class="row g-3">
-        <!-- Left: domain navigation -->
-        <div class="col-12 col-md-3 col-lg-2 mb-2 mb-md-0">
-          <div
-            id="cft-domain-nav"
-            class="nav flex-row flex-md-column nav-pills small gap-1"
-            role="tablist"
-          >
-            {% comment %} <button
-              type="button"
-              class="nav-link active cft-domain"
-              data-cft-filter="all"
-            >
-              All domains
-            </button> {% endcomment %}
-            <button
-              type="button"
-              class="nav-link cft-domain"
-              data-cft-filter="visual"
-            >
-              Visual issue
-            </button>
-            <button
-              type="button"
-              class="nav-link cft-domain"
-              data-cft-filter="hearing"
-            >
-              Hearing issue
-            </button>
-            <button
-              type="button"
-              class="nav-link cft-domain"
-              data-cft-filter="physical"
-            >
-              Physical issue
-            </button>
-            <button
-              type="button"
-              class="nav-link cft-domain"
-              data-cft-filter="communication"
-            >
-              Communication issue
-            </button>
-            <button
-              type="button"
-              class="nav-link cft-domain"
-              data-cft-filter="learning"
-            >
-              Learning issue
-            </button>
-            <button
-              type="button"
-              class="nav-link cft-domain"
-              data-cft-filter="behaviour"
-            >
-              Behaviour issue
-            </button>
-            <button
-              type="button"
-              class="nav-link cft-domain"
-              data-cft-filter="emotional"
-            >
-              Emotional issue
-            </button>
-          </div>
-        </div>
-
-        <!-- Right: questions -->
-        <div class="col-12 col-md-9 col-lg-10">
-          <div class="row g-3" id="cft-questions">
-            {% for field_name, code, question_text, choices in cft_meta %}
-              {% with field=form|form_field:field_name %}
-                {% if field %}
-                  <div
-                    class="col-12 cft-question"
-                    data-cft-code="{{ code }}"
-                  >
-                    <div class="d-flex align-items-start justify-content-between gap-2">
-
-                      <!-- Label (majority width) -->
-                      <label
-                        for="{{ field.id_for_label }}"
-                        class="form-label form-label-sm mb-0 flex-grow-1 cft-label"
-                        data-cft-original="{{ code }}. {{ question_text }}"
-                        style="max-width: 75%;"
-                      >
-                        {{ code }}. {{ question_text }}
-                      </label>
-
-                      <!-- Dropdown (auto-width) -->
-                      <div class="ms-auto" style="min-width: 180px; max-width: 240px;">
-                        {{ field }}
-                      </div>
-
-                    </div>
-
-                    {% if field.errors %}
-                      <div class="invalid-feedback d-block">
-                        {{ field.errors|striptags }}
-                      </div>
-                    {% endif %}
-                  </div>
+  <div class="card shadow-sm mb-3">
+    <div class="card-body">
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <div class="row g-3">
+          <!-- Student core -->
+          <div class="col-12 col-lg-6">
+            <h2 class="h6 mb-2">Student details</h2>
+            <div class="row g-2">
+              <div class="col-12 col-md-6">
+                <label for="{{ form.first_name.id_for_label }}"
+                       class="form-label form-label-sm mb-1">First name</label>
+                {{ form.first_name }}
+                {% if form.first_name.errors %}
+                  <div class="invalid-feedback d-block">{{ form.first_name.errors|striptags }}</div>
                 {% endif %}
-              {% endwith %}
-            {% endfor %}
+              </div>
+              <div class="col-12 col-md-6">
+                <label for="{{ form.last_name.id_for_label }}"
+                       class="form-label form-label-sm mb-1">Last name</label>
+                {{ form.last_name }}
+                {% if form.last_name.errors %}
+                  <div class="invalid-feedback d-block">{{ form.last_name.errors|striptags }}</div>
+                {% endif %}
+              </div>
+              <div class="col-12 col-md-6">
+                <label for="{{ form.date_of_birth.id_for_label }}"
+                       class="form-label form-label-sm mb-1">Date of birth</label>
+                {{ form.date_of_birth }}
+                {% if form.date_of_birth.errors %}
+                  <div class="invalid-feedback d-block">{{ form.date_of_birth.errors|striptags }}</div>
+                {% endif %}
+              </div>
+            </div>
+            <!-- Possible matches -->
+            <div id="student-matches" class="mt-3 d-none">
+              <div class="alert alert-warning p-2 small mb-0">
+                <div class="fw-semibold mb-1">Possible existing students found</div>
+                <p class="mb-2">
+                  These students look similar to the one you are entering. Please check if one of them
+                  is the same student before creating a new record. If the same record, you should browse
+                  to that student's record and update that rather than creating new record.
+                </p>
+                <ul class="list-unstyled mb-0" id="student-matches-list">
+                </ul>
+              </div>
+            </div>
+          </div>
+          <!-- Enrolment core -->
+          <div class="col-12 col-lg-6">
+            <h2 class="h6 mb-2">Enrolment context</h2>
+            <div class="row g-2">
+              <div class="col-12">
+                <label for="{{ form.school.id_for_label }}"
+                       class="form-label form-label-sm mb-1">School</label>
+                {{ form.school }}
+                {% if form.school.errors %}<div class="invalid-feedback d-block">{{ form.school.errors|striptags }}</div>{% endif %}
+              </div>
+              <div class="col-6">
+                <label for="{{ form.school_year.id_for_label }}"
+                       class="form-label form-label-sm mb-1">School year</label>
+                {{ form.school_year }}
+                {% if form.school_year.errors %}
+                  <div class="invalid-feedback d-block">{{ form.school_year.errors|striptags }}</div>
+                {% endif %}
+              </div>
+              <div class="col-6">
+                <label for="{{ form.class_level.id_for_label }}"
+                       class="form-label form-label-sm mb-1">Class level</label>
+                {{ form.class_level }}
+                {% if form.class_level.errors %}
+                  <div class="invalid-feedback d-block">{{ form.class_level.errors|striptags }}</div>
+                {% endif %}
+              </div>
+            </div>
+            <p class="small text-body-secondary mt-2 mb-0">
+              We (optionally) support tracking changing disability data over time.
+              That is why we record basic details about the student's enrolment.
+            </p>
           </div>
         </div>
-      </div>
-
-      <div class="mt-4 d-flex justify-content-between">
-        <a href="{% url 'inclusive_ed:student_list' %}" class="btn btn-sm btn-outline-secondary">
-          Cancel
-        </a>
-        <button type="submit" class="btn btn-sm btn-primary">
-          Save disability record
-        </button>
-      </div>
-
-    </form>
+        <hr class="my-3">
+        <!-- Disability & questionnaire -->
+        <h2 class="h6 mb-2">Disability questionnaire</h2>
+        <p class="small text-body-secondary mb-3">Select any of the below to record a possible disability.</p>
+        <div class="row g-3">
+          <!-- Left: domain navigation -->
+          <div class="col-12 col-md-3 col-lg-2 mb-2 mb-md-0">
+            <div id="cft-domain-nav"
+                 class="nav flex-row flex-md-column nav-pills small gap-1"
+                 role="tablist">
+              {% comment %} <button type="button" class="nav-link active cft-domain" data-cft-filter="all">
+              All domains
+              </button> {% endcomment %}
+              <button type="button" class="nav-link cft-domain" data-cft-filter="visual">Visual issue</button>
+              <button type="button" class="nav-link cft-domain" data-cft-filter="hearing">Hearing issue</button>
+              <button type="button" class="nav-link cft-domain" data-cft-filter="physical">Physical issue</button>
+              <button type="button"
+                      class="nav-link cft-domain"
+                      data-cft-filter="communication">Communication issue</button>
+              <button type="button" class="nav-link cft-domain" data-cft-filter="learning">Learning issue</button>
+              <button type="button" class="nav-link cft-domain" data-cft-filter="behaviour">Behaviour issue</button>
+              <button type="button" class="nav-link cft-domain" data-cft-filter="emotional">Emotional issue</button>
+            </div>
+          </div>
+          <!-- Right: questions -->
+          <div class="col-12 col-md-9 col-lg-10">
+            <div class="row g-3" id="cft-questions">
+              {% for field_name, code, question_text, choices in cft_meta %}
+                {% with field=form|form_field:field_name %}
+                  {% if field %}
+                    <div class="col-12 cft-question" data-cft-code="{{ code }}">
+                      <div class="d-flex align-items-start justify-content-between gap-2">
+                        <!-- Label (majority width) -->
+                        <label for="{{ field.id_for_label }}"
+                               class="form-label form-label-sm mb-0 flex-grow-1 cft-label"
+                               data-cft-original="{{ code }}. {{ question_text }}">
+                          {{ code }}. {{ question_text }}
+                        </label>
+                        <!-- Dropdown (auto-width) -->
+                        <div class="ms-auto">{{ field }}</div>
+                      </div>
+                      {% if field.errors %}<div class="invalid-feedback d-block">{{ field.errors|striptags }}</div>{% endif %}
+                    </div>
+                  {% endif %}
+                {% endwith %}
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+        <div class="mt-4 d-flex justify-content-between">
+          <a href="{% url 'inclusive_ed:student_list' %}"
+             class="btn btn-sm btn-outline-secondary">Cancel</a>
+          <button type="submit" class="btn btn-sm btn-primary">Save disability record</button>
+        </div>
+      </form>
+    </div>
   </div>
-</div>
-
-<script>
+  <script>
 (function() {
   const firstNameInput = document.getElementById("{{ form.first_name.id_for_label }}");
   const lastNameInput = document.getElementById("{{ form.last_name.id_for_label }}");
@@ -353,9 +246,8 @@
     dobInput.addEventListener("change", scheduleFetch);
   }
 })();
-</script>
-
-<script>
+  </script>
+  <script>
 (function () {
   const firstInput = document.getElementById("id_first_name");
   const lastInput = document.getElementById("id_last_name");
@@ -398,8 +290,6 @@
   // Initial run (in case form is re-rendered with existing values)
   updateLabels();
 })();
-</script>
-
-<script src="{% static 'inclusive_ed/cft_tabs.js' %}"></script>
-
-{% endblock %}
+  </script>
+  <script src="{% static 'inclusive_ed/cft_tabs.js' %}"></script>
+{% endblock content %}
