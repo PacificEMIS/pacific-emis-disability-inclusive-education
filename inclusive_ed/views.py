@@ -12,9 +12,14 @@ from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.urls import reverse
 
+import logging
+logger = logging.getLogger(__name__)
+
 from rapidfuzz import fuzz
 
 from accounts.models import Staff, StaffSchoolMembership
+
+from inclusive_ed.emails import send_student_created_email_async
 from inclusive_ed.models import Student, StudentSchoolEnrolment
 from inclusive_ed.forms import StudentCoreForm, StudentDisabilityIntakeForm, StudentEnrolmentForm
 from inclusive_ed.cft_meta import CFT_QUESTION_META, build_cft_meta_for_name
@@ -26,6 +31,7 @@ from inclusive_ed.permissions import (
     can_delete_student,
     get_allowed_enrolment_schools,
 )
+
 from integrations.models import EmisClassLevel, EmisSchool, EmisWarehouseYear
 
 PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
@@ -457,7 +463,32 @@ def student_new(request):
                     # Inject all cft1..cft20 values
                     enrol_kwargs.update(cft_data)
 
-                    StudentSchoolEnrolment.objects.create(**enrol_kwargs)
+                    enrolment = StudentSchoolEnrolment.objects.create(**enrol_kwargs)
+
+                    # Build the REAL student-detail URL
+                    student_detail_url = request.build_absolute_uri(
+                        reverse("inclusive_ed:student_detail", kwargs={"pk": student.pk})
+                    )
+
+                    # Send email *after* commit succeeds
+                    def _send_email():
+                        try:
+                            send_student_created_email_async(
+                                student=student,
+                                enrolment=enrolment,
+                                created_by=request.user,
+                                request=request,
+                                student_url=student_detail_url,
+                            )
+                        except Exception:
+                            logger.warning(
+                                "_send_email: error sending email for new student %s (created_by=%s)",
+                                f"{student.first_name} {student.last_name}",
+                                request.user,
+                                exc_info=True,
+                            )
+
+                    transaction.on_commit(_send_email)
 
             except IntegrityError:
                 messages.error(

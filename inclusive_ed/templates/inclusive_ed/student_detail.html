@@ -21,7 +21,7 @@
     <a href="{% url 'inclusive_ed:student_list' %}" class="btn btn-sm btn-outline-secondary">
       &larr; Back to students
     </a>
-    {% if user|can_edit_student %}
+    {% if user|can_edit_student:student %}
       <a href="{% url 'inclusive_ed:student_edit' student.pk %}"
         class="btn btn-sm btn-primary">
         Edit profile
@@ -96,7 +96,7 @@
           <span class="badge text-bg-light text-body-secondary">
             {{ student.enrolments.count }} total
           </span>
-          {% if user|can_edit_student %}
+          {% if user|can_edit_student:student %}
             <a href="{% url 'inclusive_ed:student_enrolment_add' student.pk %}"
                class="btn btn-sm btn-primary">
                Add Enrolment
@@ -116,7 +116,7 @@
                   <th scope="col">Class level</th>
                   {% comment %} <th scope="col">Start/End Dates</th> {% endcomment %}
                   <th scope="col" class="text-end">Status &amp; audit</th>
-                  {% if user|can_edit_student %}
+                  {% if user|can_edit_student:student %}
                     <th scope="col" class="text-end">Actions</th>
                   {% endif %}
                 </tr>
@@ -190,7 +190,7 @@
                         </div>
                       {% endif %}
                     </td>
-                    {% if user|can_edit_student %}
+                    {% if user|can_edit_student:student %}
                       <td class="text-end">
                         <a href="{% url 'inclusive_ed:student_enrolment_edit' student.pk e.pk %}"
                           class="btn btn-sm btn-outline-secondary me-1">

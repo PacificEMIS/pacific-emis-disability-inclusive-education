@@ -1,0 +1,13 @@
+A new disability record has been created.
+
+Student: {{ student.first_name }} {{ student.last_name }}
+Date of birth: {{ student.date_of_birth|date:"Y-m-d" }}
+
+School: {% if enrolment.school %}{{ enrolment.school.emis_school_name }}{% else %}N/A{% endif %}
+School year: {% if enrolment.school_year %}{{ enrolment.school_year.code }}{% else %}N/A{% endif %}
+Class level: {% if enrolment.class_level %}{{ enrolment.class_level.code }}{% else %}N/A{% endif %}
+
+Created by: {% if created_by %}{{ created_by.get_full_name|default:created_by.username }}{% else %}Unknown{% endif %}
+Created on: {% if enrolment %}{{ enrolment.created_at|date:"Y-m-d H:i" }}{% endif %}
+
+For full details, open this student in the Disability Inclusive Education module.
