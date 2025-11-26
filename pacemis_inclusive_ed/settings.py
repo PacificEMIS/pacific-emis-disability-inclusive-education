@@ -84,6 +84,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "accounts.context_processors.staff_context",
+                "pacemis_inclusive_ed.context_processors.emis_context",
             ],
         },
     },
@@ -144,6 +145,9 @@ SITE_ID = 1
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
 
 # If you keep a project-level static/ folder, include this:
 STATICFILES_DIRS = [
@@ -188,8 +192,24 @@ SOCIALACCOUNT_PROVIDERS = {
     }
 }
 
+
 # Optional: limit signups to specific email domains (uncomment + set)
 # ALLOWED_SIGNUP_DOMAINS = ["moe.gov.ki", "pacific-emis.org"]
+
+###############################################################################
+# SSL settings (for production)
+###############################################################################
+
+# Django should trust X-Forwarded-Proto sent by Apache
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# Optional, and...
+# If chaining two proxies with "ProxyPreserveHost On" and below is True it will throw an error
+# because of appended hostnames
+USE_X_FORWARDED_HOST = False
+
+# If you're using django-allauth, force https in production and http in development in its generated URLs
+ACCOUNT_DEFAULT_HTTP_PROTOCOL = "https" if not DEBUG else "http"
 
 ###############################################################################
 # EMIS integration settings

@@ -126,16 +126,12 @@ def sign_in(request):
             return redirect(next_url or reverse("inclusive_ed:dashboard"))
         messages.error(request, "Invalid username or password.")
 
-    emis_context = (
-        settings.EMIS.get("CONTEXT") if getattr(settings, "EMIS", None) else None
-    )
     # preserve ?next=... if present
     return render(
         request,
         "accounts/login.html",
         {
             "next": request.GET.get("next", ""),
-            "emis_context": emis_context,
         },
     )
 
