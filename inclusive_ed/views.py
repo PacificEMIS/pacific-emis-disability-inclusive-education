@@ -13,6 +13,7 @@ from django.core.paginator import Paginator
 from django.urls import reverse
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 from rapidfuzz import fuzz
@@ -21,11 +22,15 @@ from accounts.models import Staff, StaffSchoolMembership
 
 from inclusive_ed.emails import send_student_created_email_async
 from inclusive_ed.models import Student, StudentSchoolEnrolment
-from inclusive_ed.forms import StudentCoreForm, StudentDisabilityIntakeForm, StudentEnrolmentForm
+from inclusive_ed.forms import (
+    StudentCoreForm,
+    StudentDisabilityIntakeForm,
+    StudentEnrolmentForm,
+)
 from inclusive_ed.cft_meta import CFT_QUESTION_META, build_cft_meta_for_name
 from inclusive_ed.permissions import (
     can_create_student,
-    can_view_student, 
+    can_view_student,
     filter_students_for_user,
     can_edit_student,
     can_delete_student,
@@ -35,6 +40,7 @@ from inclusive_ed.permissions import (
 from integrations.models import EmisClassLevel, EmisSchool, EmisWarehouseYear
 
 PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
+
 
 @login_required
 def dashboard(request):
@@ -51,13 +57,19 @@ def dashboard(request):
 
     # Staff by InclusiveEd groups
     staff_admin_count = (
-        Staff.objects.filter(user__groups__name="InclusiveEd - Admins").distinct().count()
+        Staff.objects.filter(user__groups__name="InclusiveEd - Admins")
+        .distinct()
+        .count()
     )
     staff_staff_count = (
-        Staff.objects.filter(user__groups__name="InclusiveEd - Staff").distinct().count()
+        Staff.objects.filter(user__groups__name="InclusiveEd - Staff")
+        .distinct()
+        .count()
     )
     staff_teacher_count = (
-        Staff.objects.filter(user__groups__name="InclusiveEd - Teachers").distinct().count()
+        Staff.objects.filter(user__groups__name="InclusiveEd - Teachers")
+        .distinct()
+        .count()
     )
 
     # --- Student KPIs ---
@@ -104,7 +116,9 @@ def dashboard(request):
 
     def add_events_from_queryset(qs, entity_label, detail_url_name=None):
         for obj in qs:
-            when = getattr(obj, "last_updated_at", None) or getattr(obj, "created_at", None)
+            when = getattr(obj, "last_updated_at", None) or getattr(
+                obj, "created_at", None
+            )
             created_at = getattr(obj, "created_at", None)
             last_updated_at = getattr(obj, "last_updated_at", None)
 
@@ -115,7 +129,9 @@ def dashboard(request):
             else:
                 action = "Activity"
 
-            by_user = getattr(obj, "last_updated_by", None) or getattr(obj, "created_by", None)
+            by_user = getattr(obj, "last_updated_by", None) or getattr(
+                obj, "created_by", None
+            )
             by_username = getattr(by_user, "username", None) if by_user else None
 
             url = None
@@ -163,7 +179,6 @@ def dashboard(request):
 
     context = {
         "active": "dashboard",
-
         # Staff KPIs
         "total_staff": total_staff,
         "staff_added_recent": staff_added_recent,
@@ -171,23 +186,22 @@ def dashboard(request):
         "staff_admin_count": staff_admin_count,
         "staff_staff_count": staff_staff_count,
         "staff_teacher_count": staff_teacher_count,
-
         # Student KPIs
         "total_students": total_students,
         "students_added_recent": students_added_recent,
-
         # Schools KPIs
         "active_schools": active_schools,
         "schools_with_disability_data": schools_with_disability_data,
-
         # Activity
         "recent_events": events,
     }
     return render(request, "dashboard.html", context)
 
+
 # example Class-Based View using mixin
-#class DashboardView(InclusiveEdAccessRequired, TemplateView):
+# class DashboardView(InclusiveEdAccessRequired, TemplateView):
 #    template_name = "dashboard.html"
+
 
 def _page_links(page_obj, *, radius=1, ends=1):
     current = page_obj.number
@@ -207,6 +221,7 @@ def _page_links(page_obj, *, radius=1, ends=1):
                 pages.append("…")
     return pages
 
+
 def _related_enrol_qs(student):
     # Try both British/US spellings for the related_name
     if hasattr(student, "enrolments"):
@@ -214,6 +229,7 @@ def _related_enrol_qs(student):
     if hasattr(student, "enrollments"):
         return student.enrollments
     return None
+
 
 def _latest_enrolment(student):
     """
@@ -237,14 +253,17 @@ def _latest_enrolment(student):
         order_fields = ["-id"]
     return qs.order_by(*order_fields).first()
 
+
 @login_required
 def student_list(request):
     q = (request.GET.get("q") or "").strip()
 
     # Filters
-    school_filter = (request.GET.get("school") or "").strip()      # EmisSchool.emis_school_no
-    year_filter   = (request.GET.get("year") or "").strip()        # EmisWarehouseYear.code
-    level_filter  = (request.GET.get("level") or "").strip()       # EmisClassLevel.code
+    school_filter = (
+        request.GET.get("school") or ""
+    ).strip()  # EmisSchool.emis_school_no
+    year_filter = (request.GET.get("year") or "").strip()  # EmisWarehouseYear.code
+    level_filter = (request.GET.get("level") or "").strip()  # EmisClassLevel.code
 
     # Sorting
     sort = (request.GET.get("sort") or "").strip().lower()
@@ -260,31 +279,27 @@ def student_list(request):
         per_page = 25
 
     # ---- Latest-enrolment subqueries (order: newest school_year, then created_at, id)
-    enrol_qs = (
-        StudentSchoolEnrolment.objects
-        .filter(student=OuterRef("pk"))
-        .order_by("-school_year__code", "-created_at", "-id")
+    enrol_qs = StudentSchoolEnrolment.objects.filter(student=OuterRef("pk")).order_by(
+        "-school_year__code", "-created_at", "-id"
     )
 
-    latest_school_no    = Subquery(enrol_qs.values("school__emis_school_no")[:1])
-    latest_school_name  = Subquery(enrol_qs.values("school__emis_school_name")[:1])
-    latest_year_code    = Subquery(enrol_qs.values("school_year__code")[:1])
-    latest_year_label   = Subquery(enrol_qs.values("school_year__label")[:1])
-    latest_level_code   = Subquery(enrol_qs.values("class_level__code")[:1])
-    latest_level_label  = Subquery(enrol_qs.values("class_level__label")[:1])
+    latest_school_no = Subquery(enrol_qs.values("school__emis_school_no")[:1])
+    latest_school_name = Subquery(enrol_qs.values("school__emis_school_name")[:1])
+    latest_year_code = Subquery(enrol_qs.values("school_year__code")[:1])
+    latest_year_label = Subquery(enrol_qs.values("school_year__label")[:1])
+    latest_level_code = Subquery(enrol_qs.values("class_level__code")[:1])
+    latest_level_label = Subquery(enrol_qs.values("class_level__label")[:1])
 
-    qs = (
-        Student.objects
-        .annotate(
-            latest_school_no=latest_school_no,
-            latest_school_name=latest_school_name,
-            latest_year_code=latest_year_code,
-            latest_year_label=latest_year_label,
-            latest_level_code=latest_level_code,
-            latest_level_label=latest_level_label,
-        )
-        .order_by("last_name", "first_name")  # base ordering; overridden by sort param below
-    )
+    qs = Student.objects.annotate(
+        latest_school_no=latest_school_no,
+        latest_school_name=latest_school_name,
+        latest_year_code=latest_year_code,
+        latest_year_label=latest_year_label,
+        latest_level_code=latest_level_code,
+        latest_level_label=latest_level_label,
+    ).order_by(
+        "last_name", "first_name"
+    )  # base ordering; overridden by sort param below
 
     # Name-only search
     if q:
@@ -300,9 +315,9 @@ def student_list(request):
 
     # Sorting map
     sort_map = {
-        "name":        ("last_name", "first_name"),
-        "dob":         ("date_of_birth",),
-        "school":      ("latest_school_name", "latest_school_no"),
+        "name": ("last_name", "first_name"),
+        "dob": ("date_of_birth",),
+        "school": ("latest_school_name", "latest_school_no"),
         "school_year": ("latest_year_code",),
         "class_level": ("latest_level_code", "latest_level_label"),
     }
@@ -334,8 +349,8 @@ def student_list(request):
 
     # Picklists (active only; adjust if you want all)
     schools = EmisSchool.objects.filter(active=True).order_by("emis_school_no")
-    years   = EmisWarehouseYear.objects.filter(active=True).order_by("-code")
-    levels  = EmisClassLevel.objects.filter(active=True).order_by("code")
+    years = EmisWarehouseYear.objects.filter(active=True).order_by("-code")
+    levels = EmisClassLevel.objects.filter(active=True).order_by("code")
 
     # Pagination links
     page_links = _page_links(page_obj)
@@ -348,7 +363,6 @@ def student_list(request):
         "page_obj": page_obj,
         "page_links": page_links,
         "enrol_map": enrol_map,
-
         # filters + lists
         "school": school_filter,
         "year": year_filter,
@@ -356,12 +370,12 @@ def student_list(request):
         "schools": schools,
         "years": years,
         "levels": levels,
-
         # sorting
         "sort": sort,
         "dir": dir_,
     }
     return render(request, "inclusive_ed/student_list.html", context)
+
 
 @login_required
 def student_detail(request, pk):
@@ -381,11 +395,9 @@ def student_detail(request, pk):
         raise PermissionDenied
 
     # Order enrolments: newest year first, then created_at, then id
-    enrolments = (
-        student.enrolments
-        .select_related("school", "class_level", "school_year")
-        .order_by("-school_year__code", "-created_at", "-id")
-    )
+    enrolments = student.enrolments.select_related(
+        "school", "class_level", "school_year"
+    ).order_by("-school_year__code", "-created_at", "-id")
 
     latest_enrolment = enrolments.first() if enrolments else None
 
@@ -467,7 +479,9 @@ def student_new(request):
 
                     # Build the REAL student-detail URL
                     student_detail_url = request.build_absolute_uri(
-                        reverse("inclusive_ed:student_detail", kwargs={"pk": student.pk})
+                        reverse(
+                            "inclusive_ed:student_detail", kwargs={"pk": student.pk}
+                        )
                     )
 
                     # Send email *after* commit succeeds
@@ -514,8 +528,12 @@ def student_new(request):
         form.fields["school"].queryset = get_allowed_enrolment_schools(request.user)
 
     # Build a display name from whatever we have in the form
-    raw_first = (form.data.get("first_name") or form.initial.get("first_name") or "").strip()
-    raw_last = (form.data.get("last_name") or form.initial.get("last_name") or "").strip()
+    raw_first = (
+        form.data.get("first_name") or form.initial.get("first_name") or ""
+    ).strip()
+    raw_last = (
+        form.data.get("last_name") or form.initial.get("last_name") or ""
+    ).strip()
 
     if raw_first or raw_last:
         display_name = f"{raw_first} {raw_last}".strip()
@@ -533,6 +551,7 @@ def student_new(request):
         },
     )
 
+
 def _name_similarity(a: str, b: str) -> float:
     """
     Use rapidfuzz.partial_ratio for robust fuzzy matching and
@@ -544,6 +563,7 @@ def _name_similarity(a: str, b: str) -> float:
         return 0.0
     # partial_ratio is good for "Jon" vs "Jonathan"
     return fuzz.partial_ratio(a, b) / 100.0
+
 
 @login_required
 def student_matches(request):
@@ -620,15 +640,16 @@ def student_matches(request):
                 "id": s.id,
                 "first_name": s.first_name,
                 "last_name": s.last_name,
-                "date_of_birth": s.date_of_birth.isoformat()
-                if s.date_of_birth
-                else None,
+                "date_of_birth": (
+                    s.date_of_birth.isoformat() if s.date_of_birth else None
+                ),
                 "current_schools": s.current_school_names,
                 "similarity": round(score, 2),  # handy for debugging/UX tweaks
             }
         )
 
     return JsonResponse({"results": results})
+
 
 @login_required
 def student_enrolment_add(request, student_pk):
@@ -672,6 +693,7 @@ def student_enrolment_add(request, student_pk):
         },
     )
 
+
 @login_required
 def student_enrolment_edit(request, student_pk, enrolment_pk):
     student = get_object_or_404(Student, pk=student_pk)
@@ -714,6 +736,7 @@ def student_enrolment_edit(request, student_pk, enrolment_pk):
             "cft_meta": cft_meta,
         },
     )
+
 
 @login_required
 def student_enrolment_delete(request, student_pk, enrolment_pk):
