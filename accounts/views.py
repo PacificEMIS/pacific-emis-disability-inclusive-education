@@ -10,6 +10,13 @@ from django.utils.text import capfirst
 
 from accounts.models import Staff, StaffSchoolMembership
 from accounts.forms import StaffSchoolMembershipForm
+from accounts.permissions import (
+    filter_staff_for_user,
+    can_view_staff,
+    can_create_staff_membership,
+    can_edit_staff_membership,
+    can_delete_staff_membership,
+)
 from integrations.models import EmisSchool
 
 
@@ -240,6 +247,9 @@ def staff_list(request):
             memberships__school__emis_school_no=school_filter
         ).distinct()
 
+    # Apply row-level permissions
+    staff_qs = filter_staff_for_user(staff_qs, request.user)
+
     # Sorting map: align with table columns: Name, Email, Current Appointment
     sort_map = {
         "name": ("user__last_name", "user__first_name"),
@@ -301,17 +311,22 @@ def staff_detail(request, pk):
         pk=pk,
     )
 
+    # Permission: can this user view this staff member?
+    if not can_view_staff(request.user, staff):
+        messages.error(request, "You do not have permission to view this staff member.")
+        return redirect("accounts:staff_list")
+
     # Permission: who can add memberships?
-    can_add_membership = request.user.is_superuser or request.user.has_perm(
-        "accounts.add_staffschoolmembership"
-    )
+    can_add_membership = can_create_staff_membership(request.user)
 
     membership_form = (
-        StaffSchoolMembershipForm(request.POST or None) if can_add_membership else None
+        StaffSchoolMembershipForm(request.POST or None, user=request.user)
+        if can_add_membership
+        else None
     )
 
     if request.method == "POST":
-        if not can_add_membership:
+        if not can_create_staff_membership(request.user):
             messages.error(
                 request, "You do not have permission to add school memberships."
             )
@@ -319,15 +334,22 @@ def staff_detail(request, pk):
             obj = membership_form.save(commit=False)
             obj.staff = staff
 
-            # audit fields (if defined on the model)
-            if hasattr(obj, "created_by_id") and obj.created_by_id is None:
-                obj.created_by = request.user
-            if hasattr(obj, "last_updated_by_id") and obj.last_updated_by_id is None:
-                obj.last_updated_by = request.user
+            # Additional validation: School Admins can only create memberships for their schools
+            if not can_create_staff_membership(request.user, obj.school):
+                messages.error(
+                    request,
+                    f"You do not have permission to create memberships for {obj.school.emis_school_name}.",
+                )
+            else:
+                # audit fields (if defined on the model)
+                if hasattr(obj, "created_by_id") and obj.created_by_id is None:
+                    obj.created_by = request.user
+                if hasattr(obj, "last_updated_by_id") and obj.last_updated_by_id is None:
+                    obj.last_updated_by = request.user
 
-            obj.save()
-            messages.success(request, "School membership added.")
-            return redirect("accounts:staff_detail", pk=staff.pk)
+                obj.save()
+                messages.success(request, "School membership added.")
+                return redirect("accounts:staff_detail", pk=staff.pk)
 
     user_obj = staff.user
 
@@ -350,11 +372,20 @@ def staff_detail(request, pk):
         user_obj.user_permissions.all().select_related("content_type")
     )
 
+    # Build per-membership edit/delete permissions for template
+    membership_permissions = {}
+    for membership in staff.memberships.all():
+        membership_permissions[membership.pk] = {
+            "can_edit": can_edit_staff_membership(request.user, membership),
+            "can_delete": can_delete_staff_membership(request.user, membership),
+        }
+
     context = {
         "staff": staff,
         "active": "staff",
         "membership_form": membership_form,
         "can_add_membership": can_add_membership,
+        "membership_permissions": membership_permissions,
         "group_permissions": group_permissions,
         "direct_permission_sections": direct_permission_sections,
     }
@@ -373,29 +404,36 @@ def staff_membership_edit(request, staff_id, pk):
         staff=staff,
     )
 
-    can_edit = request.user.is_superuser or request.user.has_perm(
-        "accounts.change_staffschoolmembership"
-    )
-    if not can_edit:
+    # Permission: check if user can edit this specific membership
+    if not can_edit_staff_membership(request.user, membership):
         messages.error(
-            request, "You do not have permission to edit school memberships."
+            request, "You do not have permission to edit this school membership."
         )
         return redirect("accounts:staff_detail", pk=staff.pk)
 
     if request.method == "POST":
-        form = StaffSchoolMembershipForm(request.POST, instance=membership)
+        form = StaffSchoolMembershipForm(
+            request.POST, instance=membership, user=request.user
+        )
         if form.is_valid():
             obj = form.save(commit=False)
 
-            # Audit: stamp last_updated_by if field exists
-            if hasattr(obj, "last_updated_by_id"):
-                obj.last_updated_by = request.user
+            # Additional validation: ensure school hasn't changed to one outside user's scope
+            if not can_create_staff_membership(request.user, obj.school):
+                messages.error(
+                    request,
+                    f"You do not have permission to assign memberships for {obj.school.emis_school_name}.",
+                )
+            else:
+                # Audit: stamp last_updated_by if field exists
+                if hasattr(obj, "last_updated_by_id"):
+                    obj.last_updated_by = request.user
 
-            obj.save()
-            messages.success(request, "School membership updated.")
-            return redirect("accounts:staff_detail", pk=staff.pk)
+                obj.save()
+                messages.success(request, "School membership updated.")
+                return redirect("accounts:staff_detail", pk=staff.pk)
     else:
-        form = StaffSchoolMembershipForm(instance=membership)
+        form = StaffSchoolMembershipForm(instance=membership, user=request.user)
 
     context = {
         "active": "staff",
@@ -418,12 +456,10 @@ def staff_membership_delete(request, staff_id, pk):
         staff=staff,
     )
 
-    can_delete = request.user.is_superuser or request.user.has_perm(
-        "accounts.delete_staffschoolmembership"
-    )
-    if not can_delete:
+    # Permission: check if user can delete this specific membership
+    if not can_delete_staff_membership(request.user, membership):
         messages.error(
-            request, "You do not have permission to delete school memberships."
+            request, "You do not have permission to delete this school membership."
         )
         return redirect("accounts:staff_detail", pk=staff.pk)
 

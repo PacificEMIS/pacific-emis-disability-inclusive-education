@@ -10,6 +10,7 @@ from accounts.models import StaffSchoolMembership
 # ---- Group names (single source of truth) ----
 
 GROUP_INCLUSIVE_ADMINS = "InclusiveEd - Admins"
+GROUP_INCLUSIVE_SCHOOL_ADMINS = "InclusiveEd - School Admins"
 GROUP_INCLUSIVE_STAFF = "InclusiveEd - Staff"
 GROUP_INCLUSIVE_TEACHERS = "InclusiveEd - Teachers"
 
@@ -34,6 +35,11 @@ def is_inclusive_admin(user) -> bool:
 def is_inclusive_staff(user) -> bool:
     """Read-only, per-school restricted."""
     return _in_group(user, GROUP_INCLUSIVE_STAFF)
+
+
+def is_inclusive_school_admin(user) -> bool:
+    """School-scoped admin; can manage staff/memberships at their schools."""
+    return _in_group(user, GROUP_INCLUSIVE_SCHOOL_ADMINS)
 
 
 def is_inclusive_teacher(user) -> bool:
@@ -139,15 +145,15 @@ def can_create_student(user) -> bool:
     Who can *create* a student (profile/enrolments/disability)?
 
     - Admins/superusers: always.
-    - InclusiveEd – Admins
-    - Teachers: if they have school access.
+    - School Admins: yes (at their schools).
+    - Teachers: yes (at their schools).
     - Staff: never (read-only).
     """
     if not user or not user.is_authenticated:
         return False
     if user.is_superuser or is_inclusive_admin(user):
         return True
-    if is_inclusive_teacher(user):
+    if is_inclusive_school_admin(user) or is_inclusive_teacher(user):
         return True
     return False
 
@@ -157,14 +163,14 @@ def can_view_student(user, student: Student) -> bool:
     Who can *view* a student?
 
     - Admins/superusers: always.
-    - Staff/Teachers: only if they have school access to that student.
+    - School Admins/Staff/Teachers: only if they have school access to that student.
     - Others: never.
     """
     if not user or not user.is_authenticated:
         return False
     if user.is_superuser or is_inclusive_admin(user):
         return True
-    if is_inclusive_staff(user) or is_inclusive_teacher(user):
+    if is_inclusive_school_admin(user) or is_inclusive_staff(user) or is_inclusive_teacher(user):
         return user_has_school_access_to_student(user, student)
     return False
 
@@ -174,6 +180,7 @@ def can_edit_student(user, student: Student) -> bool:
     Who can *edit* a student (profile/enrolments/disability)?
 
     - Admins/superusers: always.
+    - School Admins: if they have school access.
     - Teachers: if they have school access.
     - Staff: never (read-only).
     """
@@ -181,7 +188,7 @@ def can_edit_student(user, student: Student) -> bool:
         return False
     if user.is_superuser or is_inclusive_admin(user):
         return True
-    if is_inclusive_teacher(user):
+    if is_inclusive_school_admin(user) or is_inclusive_teacher(user):
         return user_has_school_access_to_student(user, student)
     return False
 
@@ -203,7 +210,7 @@ def filter_students_for_user(qs: QuerySet, user) -> QuerySet:
     where qs is expected to have `latest_school_no` annotated.
 
     - Superusers / InclusiveEd - Admins: see all students in qs.
-    - InclusiveEd - Staff / Teachers: only see students whose latest_school_no
+    - InclusiveEd - School Admins / Staff / Teachers: only see students whose latest_school_no
       is one of their active StaffSchoolMembership schools.
     - Everyone else: see nothing.
     """
@@ -214,8 +221,8 @@ def filter_students_for_user(qs: QuerySet, user) -> QuerySet:
     if user.is_superuser or is_inclusive_admin(user):
         return qs
 
-    # Only Staff / Teachers get per-school restricted views
-    if not (is_inclusive_staff(user) or is_inclusive_teacher(user)):
+    # Only School Admins / Staff / Teachers get per-school restricted views
+    if not (is_inclusive_school_admin(user) or is_inclusive_staff(user) or is_inclusive_teacher(user)):
         return qs.none()
 
     # Get the user’s active schools
@@ -238,6 +245,7 @@ def get_allowed_enrolment_schools(user):
     Schools a user is allowed to *write* enrolments/disability data for.
 
     - Superusers + InclusiveEd - Admins: all active schools.
+    - InclusiveEd - School Admins: their active membership schools (get_user_schools).
     - InclusiveEd - Teachers: their active membership schools (get_user_schools).
     - InclusiveEd - Staff: read-only, so they get no write schools here.
     - Others: none.
@@ -248,7 +256,7 @@ def get_allowed_enrolment_schools(user):
     if user.is_superuser or is_inclusive_admin(user):
         return EmisSchool.objects.filter(active=True).order_by("emis_school_name")
 
-    if is_inclusive_teacher(user):
+    if is_inclusive_school_admin(user) or is_inclusive_teacher(user):
         return get_user_schools(user).order_by("emis_school_name")
 
     # Staff and other users are read-only
