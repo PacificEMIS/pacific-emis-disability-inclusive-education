@@ -60,12 +60,8 @@ class Staff(models.Model):
 
 class StaffSchoolMembership(models.Model):
     """
-    Staff ↔ School association with role, job title, and validity window.
+    Staff ↔ School association with job title and validity window.
     """
-
-    class LoginRole(models.TextChoices):
-        TEACHER = "Teacher", "Teacher"
-        ADMINISTRATOR = "Administrator", "Administrator"
 
     staff = models.ForeignKey(
         Staff, on_delete=models.CASCADE, related_name="memberships"
@@ -76,7 +72,6 @@ class StaffSchoolMembership(models.Model):
     job_title = models.ForeignKey(
         EmisJobTitle, on_delete=models.PROTECT, related_name="staff_memberships"
     )
-    login_role = models.CharField(max_length=32, choices=LoginRole.choices)
 
     start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
@@ -101,19 +96,18 @@ class StaffSchoolMembership(models.Model):
 
     class Meta:
         indexes = [
-            models.Index(fields=["login_role"]),
             models.Index(fields=["start_date", "end_date"]),
         ]
         constraints = [
             models.UniqueConstraint(
-                fields=["staff", "school", "start_date", "end_date", "login_role"],
+                fields=["staff", "school", "start_date", "end_date"],
                 name="uq_membership_exact_tuple",
             ),
         ]
         ordering = ["staff_id", "school_id", "start_date"]
 
     def __str__(self):
-        return f"{self.staff.user} @ {self.school} ({self.login_role})"
+        return f"{self.staff.user} @ {self.school}"
 
     @property
     def is_active(self):
