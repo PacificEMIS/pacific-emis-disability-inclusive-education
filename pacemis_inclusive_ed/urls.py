@@ -26,3 +26,6 @@ urlpatterns = [
     # allauth URLs (login, logout, Google, etc.)
     path("accounts/", include("allauth.urls")),
 ]
+
+# Custom error handlers
+handler403 = "accounts.views.permission_denied_view"
