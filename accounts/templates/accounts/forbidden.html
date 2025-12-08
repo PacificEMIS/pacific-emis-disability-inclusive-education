@@ -1,2 +1,26 @@
-<h3>Permission denied</h3>
-<p>You’re not assigned to that school.</p>
+{% extends "base.html" %}
+{% block title %}403 Forbidden{% endblock title %}
+{% block content %}
+  <div class="d-flex align-items-center justify-content-center" style="min-height: 60vh;">
+    <div class="text-center">
+      <div class="mb-4">
+        <i class="bi bi-shield-x text-danger" style="font-size: 6rem;"></i>
+      </div>
+      <h1 class="display-4 fw-bold text-danger mb-3">403 Forbidden</h1>
+      <p class="lead text-body-secondary mb-4">
+        You don't have permission to access this resource.
+      </p>
+      <p class="text-body-secondary mb-4">
+        If you believe this is an error, please contact your system administrator.
+      </p>
+      <div class="d-flex gap-2 justify-content-center">
+        <a href="{% url 'inclusive_ed:dashboard' %}" class="btn btn-primary">
+          <i class="bi bi-house-door me-2"></i>Go to Dashboard
+        </a>
+        <a href="javascript:history.back()" class="btn btn-outline-secondary">
+          <i class="bi bi-arrow-left me-2"></i>Go Back
+        </a>
+      </div>
+    </div>
+  </div>
+{% endblock content %}

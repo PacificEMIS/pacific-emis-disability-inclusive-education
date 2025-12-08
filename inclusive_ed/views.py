@@ -132,7 +132,16 @@ def dashboard(request):
             by_user = getattr(obj, "last_updated_by", None) or getattr(
                 obj, "created_by", None
             )
-            by_username = getattr(by_user, "username", None) if by_user else None
+            # Display full name, fallback to email, then username
+            by_display = None
+            if by_user:
+                full_name = by_user.get_full_name()
+                if full_name:
+                    by_display = full_name
+                elif by_user.email:
+                    by_display = by_user.email
+                else:
+                    by_display = by_user.username
 
             url = None
             if detail_url_name and when:
@@ -147,7 +156,7 @@ def dashboard(request):
                         "when": when,
                         "entity": entity_label,
                         "action": action,
-                        "by": by_username,
+                        "by": by_display,
                         "url": url,
                     }
                 )

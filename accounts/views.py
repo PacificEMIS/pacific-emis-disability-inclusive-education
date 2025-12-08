@@ -474,3 +474,10 @@ def staff_membership_delete(request, staff_id, pk):
         "membership": membership,
     }
     return render(request, "accounts/staff_membership_confirm_delete.html", context)
+
+
+def permission_denied_view(request, exception=None):
+    """
+    Custom 403 handler that renders a styled forbidden page.
+    """
+    return render(request, "accounts/forbidden.html", status=403)
