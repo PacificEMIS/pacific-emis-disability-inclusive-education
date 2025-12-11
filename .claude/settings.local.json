@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(\"c:\\Users\\ghach\\Development\\Pacific EMIS\\repositories\\pacific-emis-disability-inclusive-education\\static\\core\\cft_tabs.js\")",
+      "Bash(python manage.py makemigrations:*)",
+      "Bash(python3:*)",
+      "Bash(python:*)",
+      "Bash(cat:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

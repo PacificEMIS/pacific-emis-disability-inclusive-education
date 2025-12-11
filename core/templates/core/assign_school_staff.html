@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}Assign as School Staff{% endblock title %}
+{% block content %}
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item">
+        <a href="{% url 'core:pending_users_list' %}">Pending Users</a>
+      </li>
+      <li class="breadcrumb-item active" aria-current="page">Assign as School Staff</li>
+    </ol>
+  </nav>
+
+  <div class="row">
+    <div class="col-12 col-lg-8">
+      <div class="card shadow-sm">
+        <div class="card-header">
+          <h1 class="h5 mb-0">
+            <i class="bi bi-people me-2"></i>
+            Assign as School Staff
+          </h1>
+        </div>
+        <div class="card-body">
+          <!-- User Info -->
+          <div class="alert alert-light border mb-4">
+            <h2 class="h6 mb-2">User to be assigned:</h2>
+            <dl class="row mb-0 small">
+              <dt class="col-sm-3">Name</dt>
+              <dd class="col-sm-9">
+                {% if target_user.first_name or target_user.last_name %}
+                  {{ target_user.first_name }} {{ target_user.last_name }}
+                {% else %}
+                  <span class="text-body-secondary">Not set</span>
+                {% endif %}
+              </dd>
+              <dt class="col-sm-3">Email</dt>
+              <dd class="col-sm-9">{{ target_user.email|default:"Not set" }}</dd>
+              <dt class="col-sm-3">Username</dt>
+              <dd class="col-sm-9">{{ target_user.username }}</dd>
+              <dt class="col-sm-3">Date Joined</dt>
+              <dd class="col-sm-9 mb-0">{{ target_user.date_joined|date:"Y-m-d H:i" }}</dd>
+            </dl>
+          </div>
+
+          <form method="post">
+            {% csrf_token %}
+
+            <!-- Staff Type -->
+            <div class="mb-3">
+              <label for="id_staff_type" class="form-label">{{ form.staff_type.label }}</label>
+              {{ form.staff_type }}
+              {% if form.staff_type.help_text %}
+                <div class="form-text">{{ form.staff_type.help_text }}</div>
+              {% endif %}
+              {% if form.staff_type.errors %}
+                <div class="invalid-feedback d-block">{{ form.staff_type.errors|join:", " }}</div>
+              {% endif %}
+            </div>
+
+            <!-- Groups -->
+            <div class="mb-3">
+              <label class="form-label">{{ form.groups.label }} <span class="text-danger">*</span></label>
+              {% if form.groups.help_text %}
+                <div class="form-text mb-2">{{ form.groups.help_text }}</div>
+              {% endif %}
+              <div class="border rounded p-3 bg-light">
+                {% for choice in form.groups %}
+                  <div class="form-check">
+                    {{ choice.tag }}
+                    <label class="form-check-label" for="{{ choice.id_for_label }}">
+                      {{ choice.choice_label }}
+                    </label>
+                  </div>
+                {% endfor %}
+              </div>
+              {% if form.groups.errors %}
+                <div class="invalid-feedback d-block">{{ form.groups.errors|join:", " }}</div>
+              {% endif %}
+            </div>
+
+            <hr>
+
+            <div class="d-flex justify-content-between">
+              <a href="{% url 'core:pending_users_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i> Cancel
+              </a>
+              <button type="submit" class="btn btn-success">
+                <i class="bi bi-check-lg me-1"></i> Assign as School Staff
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Help Panel -->
+    <div class="col-12 col-lg-4 mt-3 mt-lg-0">
+      <div class="card shadow-sm">
+        <div class="card-header">
+          <h2 class="h6 mb-0"><i class="bi bi-info-circle me-1"></i> About School Staff</h2>
+        </div>
+        <div class="card-body small">
+          <p>
+            <strong>School Staff</strong> are users who work at specific schools, such as:
+          </p>
+          <ul class="mb-3">
+            <li>Teachers</li>
+            <li>Principals</li>
+            <li>School counselors</li>
+            <li>Administrative staff</li>
+          </ul>
+          <p class="mb-2">
+            After assignment, you can add <strong>school assignments</strong> to specify which school(s) this staff member works at.
+          </p>
+          <hr>
+          <h3 class="h6">Group Permissions</h3>
+          <dl class="mb-0">
+            <dt>Admins</dt>
+            <dd class="text-body-secondary">Full system access</dd>
+            <dt>School Admins</dt>
+            <dd class="text-body-secondary">Manage staff and students at their schools</dd>
+            <dt>Teachers</dt>
+            <dd class="text-body-secondary">Add/edit students at their schools</dd>
+            <dt>School Staff</dt>
+            <dd class="text-body-secondary mb-0">Read-only access at their schools</dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock content %}

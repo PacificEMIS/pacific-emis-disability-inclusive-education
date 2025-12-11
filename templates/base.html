@@ -34,7 +34,7 @@
     <!-- Header -->
     <header class="navbar navbar-dark sticky-top bg-primary flex-md-nowrap p-0 shadow">
       <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3"
-         href="{% url 'inclusive_ed:dashboard' %}">{{ emis_context }} — Disability Inclusive Education</a>
+         href="{% url 'core:dashboard' %}">{{ emis_context }} — Disability Inclusive Education</a>
       {% if request.user.is_authenticated %}
         <!-- Mobile sidebar toggle -->
         <button class="navbar-toggler d-md-none collapsed me-2"
@@ -50,10 +50,10 @@
           <!-- Logged-in user badge -->
           <div class="nav-item text-nowrap me-2">
             {% if request.user.is_authenticated %}
-              {% if staff_pk_for_request_user %}
-                <a href="{% url 'accounts:staff_detail' staff_pk_for_request_user %}"
+              {% if user_profile_url %}
+                <a href="{{ user_profile_url }}"
                    class="navbar-text text-light small d-flex align-items-center text-decoration-none"
-                   title="View your staff profile">
+                   title="View your profile">
                   <i class="bi bi-person-circle me-1"></i>
                   {{ request.user.get_full_name|default:request.user.username }}
                   {% if request.user.email %}({{ request.user.email }}){% endif %}
@@ -96,22 +96,41 @@
                 <ul class="nav nav-pills flex-column mb-auto pt-3">
                   <li class="nav-item">
                     <a class="nav-link d-flex align-items-center text-light {% if active == 'dashboard' %}active bg-secondary{% endif %}"
-                       href="{% url 'inclusive_ed:dashboard' %}">
+                       href="{% url 'core:dashboard' %}">
                       <i class="bi bi-speedometer2 me-2"></i> Dashboard
                     </a>
                   </li>
                   <li>
                     <a class="nav-link d-flex align-items-center text-light {% if active == 'staff' %}active bg-secondary{% endif %}"
-                       href="{% url 'accounts:staff_list' %}">
-                      <i class="bi bi-people me-2"></i> Staff
+                       href="{% url 'core:staff_list' %}">
+                      <i class="bi bi-people me-2"></i> School Staff
                     </a>
                   </li>
+                  {% if is_system_level_user %}
+                    <li>
+                      <a class="nav-link d-flex align-items-center text-light {% if active == 'system_users' %}active bg-secondary{% endif %}"
+                         href="{% url 'core:system_user_list' %}">
+                        <i class="bi bi-building me-2"></i> {{ terminology.system_users_plural }}
+                      </a>
+                    </li>
+                  {% endif %}
                   <li>
                     <a class="nav-link d-flex align-items-center text-light {% if active == 'students' %}active bg-secondary{% endif %}"
-                       href="{% url 'inclusive_ed:student_list' %}">
+                       href="{% url 'core:student_list' %}">
                       <i class="bi bi-mortarboard me-2"></i> Students
                     </a>
                   </li>
+                  {% if is_admins_group_user %}
+                    <li class="nav-item mt-3">
+                      <span class="nav-link text-secondary small text-uppercase">Admin</span>
+                    </li>
+                    <li>
+                      <a class="nav-link d-flex align-items-center text-light {% if active == 'pending_users' %}active bg-secondary{% endif %}"
+                         href="{% url 'core:pending_users_list' %}">
+                        <i class="bi bi-person-plus me-2"></i> Pending Users
+                      </a>
+                    </li>
+                  {% endif %}
                 </ul>
               </nav>
             </div>
@@ -125,7 +144,7 @@
             <footer class="pt-5 small text-body-secondary">
               <hr>
               <div>
-                © {% now "Y" %} {{ emis_context }} —
+                © {% now "Y" %} {{ emis_context }} — Disability Inclusive Education |
                 Last updated: {% now "Y-m-d H:i" as current_time %}
                 {% localtime on %}{{ current_time }}{% endlocaltime %}
               </div>

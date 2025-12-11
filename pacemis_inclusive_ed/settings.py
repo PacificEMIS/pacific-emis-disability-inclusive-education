@@ -55,9 +55,9 @@ INSTALLED_APPS = [
     # Google provider
     "allauth.socialaccount.providers.google",
     # Project apps
+    "core",
     "accounts",
     "integrations",
-    "inclusive_ed",
 ]
 
 MIDDLEWARE = [
@@ -69,6 +69,8 @@ MIDDLEWARE = [
     "allauth.account.middleware.AccountMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # App-level access control (must be after AuthenticationMiddleware)
+    "core.middleware.AppAccessMiddleware",
 ]
 
 ROOT_URLCONF = "pacemis_inclusive_ed.urls"
@@ -83,8 +85,10 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
-                "accounts.context_processors.staff_context",
+                "core.context_processors.staff_context",
                 "pacemis_inclusive_ed.context_processors.emis_context",
+                "pacemis_inclusive_ed.context_processors.app_name",
+                "pacemis_inclusive_ed.context_processors.terminology",
             ],
         },
     },
@@ -226,6 +230,29 @@ EMIS = {
 }
 EMIS["LOGIN_URL"] = f'{EMIS["BASE_URL"]}/api/token'
 EMIS["LOOKUPS_URL"] = f'{EMIS["BASE_URL"]}/api/lookups/collection/core'
+
+###############################################################################
+# Application settings
+###############################################################################
+
+# Application name displayed throughout the UI
+APP_NAME = os.getenv("APP_NAME", "Disability Inclusive Education")
+
+###############################################################################
+# Terminology / Localization settings
+###############################################################################
+
+# Customize labels for different user types based on country/context
+# Examples:
+#   - FSM: "National Department of Education Staff"
+#   - RMI: "PSS Staff" or "Ministry of Education Staff"
+#   - Palau: "Ministry of Education Staff"
+TERMINOLOGY = {
+    "SYSTEM_USERS_SINGULAR": os.getenv(
+        "TERMINOLOGY_SYSTEM_USERS_SINGULAR", "System User"
+    ),
+    "SYSTEM_USERS_PLURAL": os.getenv("TERMINOLOGY_SYSTEM_USERS_PLURAL", "System Users"),
+}
 
 ###############################################################################
 # Email settings
