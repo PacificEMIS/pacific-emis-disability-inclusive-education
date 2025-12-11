@@ -10,7 +10,7 @@ class EmisSchool(models.Model):
         ordering = ["emis_school_no"]
 
     def __str__(self):
-        return f"{self.emis_school_no} — {self.emis_school_name}"
+        return f"{self.emis_school_name} ({self.emis_school_no})"
 
 
 class EmisClassLevel(models.Model):

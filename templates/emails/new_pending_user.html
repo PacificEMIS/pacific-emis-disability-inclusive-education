@@ -1,0 +1,81 @@
+{# djlint:off H021 #}
+{% extends "emails/base_email.html" %}
+{% block subject %}
+  {{ emis_context }} Disability Inclusive Education: New user awaiting role assignment
+{% endblock subject %}
+{% block header_title %}
+  {{ emis_context }} — Disability Inclusive Education
+{% endblock header_title %}
+{% block body_intro %}
+  <p>Hello,</p>
+  <p>
+    A new user has signed in to the {{ emis_context }} Disability Inclusive Education app
+    and is awaiting role assignment.
+  </p>
+{% endblock body_intro %}
+{% block body_main %}
+  <table role="presentation"
+         cellspacing="0"
+         cellpadding="0"
+         border="0"
+         style="width:100%;
+                margin:16px 0;
+                border:1px solid #dee2e6;
+                border-radius:6px;
+                overflow:hidden">
+    <tr>
+      <td style="padding:12px 16px; background-color:#f8f9fa; border-bottom:1px solid #dee2e6;">
+        <strong style="font-size:14px;">New User Details</strong>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:16px;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="width:100%;">
+          <tr>
+            <td style="padding:4px 0; color:#6c757d; width:100px;">Name:</td>
+            <td style="padding:4px 0;">
+              {% if new_user.first_name or new_user.last_name %}
+                {{ new_user.first_name }} {{ new_user.last_name }}
+              {% else %}
+                <span style="color:#6c757d;">Not provided</span>
+              {% endif %}
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:4px 0; color:#6c757d;">Email:</td>
+            <td style="padding:4px 0;">{{ new_user.email|default:"Not provided" }}</td>
+          </tr>
+          <tr>
+            <td style="padding:4px 0; color:#6c757d;">Username:</td>
+            <td style="padding:4px 0;">{{ new_user.username }}</td>
+          </tr>
+          <tr>
+            <td style="padding:4px 0; color:#6c757d;">Signed in:</td>
+            <td style="padding:4px 0;">{{ new_user.date_joined|date:"Y-m-d H:i" }}</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+  <p style="margin:16px 0; color:#495057;">
+    Please review this user and assign them as either <strong>School Staff</strong>
+    (for teachers, principals, school-based staff) or <strong>System User</strong>
+    (for ministry officials, analysts, system administrators).
+  </p>
+{% endblock body_main %}
+{% block body_cta %}
+  {% if pending_users_url %}
+    <p style="margin: 16px 0;">
+      <a href="{{ pending_users_url }}"
+         style="display:inline-block;
+                padding:10px 18px;
+                border-radius:6px;
+                background-color:#0d6efd;
+                color:#ffffff !important;
+                text-decoration:none;
+                font-size:14px;
+                font-weight:500">Review Pending Users</a>
+    </p>
+  {% endif %}
+{% endblock body_cta %}
+{# djlint:on #}

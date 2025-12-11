@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}
+    Delete assignment — {{ staff.user.get_full_name|default:staff.user.username }}
+{% endblock title %}
+{% block content %}
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <div>
+            <h1 class="h4 mb-0">Delete school assignment</h1>
+            <div class="small text-body-secondary">
+                For:
+                {% if staff.user.first_name or staff.user.last_name %}
+                    {{ staff.user.first_name }} {{ staff.user.last_name }}
+                {% else %}
+                    {{ staff.user.username }}
+                {% endif %}
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'core:staff_detail' staff.pk %}"
+               class="btn btn-sm btn-outline-secondary">← Back to staff</a>
+        </div>
+    </div>
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <p>Are you sure you want to delete this assignment?</p>
+            <ul class="small text-body-secondary mb-3">
+                <li>School: {{ assignment.school.emis_school_name }} ({{ assignment.school.emis_school_no }})</li>
+                <li>
+                    Job title:
+                    {% if assignment.job_title %}
+                        {{ assignment.job_title.label }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </li>
+                <li>
+                    Validity:
+                    {% if assignment.start_date %}
+                        from {{ assignment.start_date|date:"Y-m-d" }}
+                    {% else %}
+                        from —
+                    {% endif %}
+                    {% if assignment.end_date %}
+                        to {{ assignment.end_date|date:"Y-m-d" }}
+                    {% else %}
+                        to open-ended
+                    {% endif %}
+                </li>
+            </ul>
+            <form method="post" class="d-flex justify-content-between">
+                {% csrf_token %}
+                <a href="{% url 'core:staff_detail' staff.pk %}"
+                   class="btn btn-sm btn-outline-secondary">Cancel</a>
+                <button type="submit" class="btn btn-sm btn-danger">Yes, delete this assignment</button>
+            </form>
+        </div>
+    </div>
+{% endblock content %}

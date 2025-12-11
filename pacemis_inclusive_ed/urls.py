@@ -22,7 +22,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     # my apps
     path("accounts/", include("accounts.urls")),
-    path("", include("inclusive_ed.urls")),
+    path("", include("core.urls")),  # Dashboard + students now in core
     # allauth URLs (login, logout, Google, etc.)
     path("accounts/", include("allauth.urls")),
 ]

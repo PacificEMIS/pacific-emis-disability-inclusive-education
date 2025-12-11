@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Delete enrolment — {{ student.first_name }} {{ student.last_name }}{% endblock title %}
+{% block content %}
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <div>
+            <h1 class="h4 mb-0">Delete student enrolment / disability data</h1>
+            <div class="small text-body-secondary">
+                For: {{ student.first_name }} {{ student.last_name }}
+                (DOB: {{ student.date_of_birth|date:"Y-m-d" }})
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'core:student_detail' student.pk %}"
+               class="btn btn-sm btn-outline-secondary">← Back to student</a>
+        </div>
+    </div>
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <p>Are you sure you want to delete this enrolment and its disability data?</p>
+            <ul class="small text-body-secondary mb-3">
+                <li>School: {{ enrolment.school.emis_school_name }} ({{ enrolment.school.emis_school_no }})</li>
+                <li>School year: {{ enrolment.school_year.code }}</li>
+                <li>Class level: {{ enrolment.class_level.code }} — {{ enrolment.class_level.label }}</li>
+                <li>
+                    Validity:
+                    {% if enrolment.start_date %}
+                        from {{ enrolment.start_date|date:"Y-m-d" }}
+                    {% else %}
+                        from —
+                    {% endif %}
+                    {% if enrolment.end_date %}
+                        to {{ enrolment.end_date|date:"Y-m-d" }}
+                    {% else %}
+                        to open-ended
+                    {% endif %}
+                </li>
+            </ul>
+            <form method="post" class="d-flex justify-content-between">
+                {% csrf_token %}
+                <a href="{% url 'core:student_detail' student.pk %}"
+                   class="btn btn-sm btn-outline-secondary">Cancel</a>
+                <button type="submit" class="btn btn-sm btn-danger">Yes, delete this enrolment</button>
+            </form>
+        </div>
+    </div>
+{% endblock content %}

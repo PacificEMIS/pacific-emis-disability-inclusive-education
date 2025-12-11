@@ -1,0 +1,1 @@
+# Templatetags for core app

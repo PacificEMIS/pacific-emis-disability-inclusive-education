@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block title %}{{ system_user.user.get_full_name|default:system_user.user.username }}{% endblock title %}
+{% block content %}
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item">
+        <a href="{% url 'core:system_user_list' %}">{{ terminology.system_users_plural }}</a>
+      </li>
+      <li class="breadcrumb-item active" aria-current="page">{{ system_user.user.get_full_name|default:system_user.user.username }}</li>
+    </ol>
+  </nav>
+  {# FIRST ROW: Profile + Permissions #}
+  <div class="row g-3">
+    <!-- Profile / account summary -->
+    <div class="col-12 col-xl-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-header">
+          <h2 class="h6 mb-0">Profile</h2>
+        </div>
+        <div class="card-body small">
+          <dl class="row mb-2">
+            <dt class="col-5 col-sm-4">Name</dt>
+            <dd class="col-7 col-sm-8">
+              {% if system_user.user.first_name or system_user.user.last_name %}
+                {{ system_user.user.first_name }} {{ system_user.user.last_name }}
+              {% else %}
+                <span class="text-body-secondary">Not set</span>
+              {% endif %}
+            </dd>
+            <dt class="col-5 col-sm-4">Username</dt>
+            <dd class="col-7 col-sm-8">
+              {{ system_user.user.username }}
+            </dd>
+            <dt class="col-5 col-sm-4">Email</dt>
+            <dd class="col-7 col-sm-8">
+              {% if system_user.user.email %}
+                {{ system_user.user.email }}
+              {% else %}
+                <span class="text-body-secondary">Not set</span>
+              {% endif %}
+            </dd>
+            <dt class="col-5 col-sm-4">Status</dt>
+            <dd class="col-7 col-sm-8">
+              {% if system_user.user.is_active %}
+                <span class="badge text-bg-success">Active</span>
+              {% else %}
+                <span class="badge text-bg-secondary">Inactive</span>
+              {% endif %}
+            </dd>
+          </dl>
+          <hr>
+          <dl class="row mb-2">
+            <dt class="col-5 col-sm-4">Organization</dt>
+            <dd class="col-7 col-sm-8">
+              {% if system_user.organization %}
+                {{ system_user.organization }}
+              {% else %}
+                <span class="text-body-secondary">Not set</span>
+              {% endif %}
+            </dd>
+            <dt class="col-5 col-sm-4">Position</dt>
+            <dd class="col-7 col-sm-8">
+              {% if system_user.position_title %}
+                {{ system_user.position_title }}
+              {% else %}
+                <span class="text-body-secondary">Not set</span>
+              {% endif %}
+            </dd>
+          </dl>
+          <hr>
+          <dl class="row mb-0">
+            <dt class="col-5 col-sm-4">Created</dt>
+            <dd class="col-7 col-sm-8">
+              {{ system_user.created_at|date:"Y-m-d" }}
+              {% if system_user.created_by %}
+                <span class="text-body-secondary">by {{ system_user.created_by.get_full_name|default:system_user.created_by.username }}</span>
+              {% endif %}
+            </dd>
+            <dt class="col-5 col-sm-4">Last updated</dt>
+            <dd class="col-7 col-sm-8">
+              {{ system_user.last_updated_at|date:"Y-m-d" }}
+              {% if system_user.last_updated_by %}
+                <span class="text-body-secondary">
+                  by {{ system_user.last_updated_by.get_full_name|default:system_user.last_updated_by.username }}
+                </span>
+              {% endif %}
+            </dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+    <!-- Permissions summary -->
+    <div class="col-12 col-xl-8">
+      <div class="card shadow-sm h-100">
+        <div class="card-header">
+          <h2 class="h6 mb-0">Permissions</h2>
+        </div>
+        <div class="card-body small">
+          <p class="mb-3">
+            This user's access is determined by the <strong>groups</strong> and <strong>direct permissions</strong> assigned to them.
+          </p>
+            {# Groups with structured permissions #}
+            <h3 class="h6 mt-2 mb-2">Groups</h3>
+            {% if group_permissions %}
+              <ul class="list-unstyled mb-0">
+                {% for gp in group_permissions %}
+                  <li class="mb-3">
+                    <div class="fw-semibold">{{ gp.group.name }}</div>
+                    {% if gp.sections %}
+                      <dl class="row mb-0 mt-1">
+                        {% for sec in gp.sections %}
+                          <dt class="col-4 col-sm-3 col-lg-2">{{ sec.label }}:</dt>
+                          <dd class="col-8 col-sm-9 col-lg-10">
+                            {{ sec.models|join:", " }}
+                          </dd>
+                        {% endfor %}
+                      </dl>
+                    {% else %}
+                      <div class="text-body-secondary">No permissions assigned to this group.</div>
+                    {% endif %}
+                  </li>
+                {% endfor %}
+              </ul>
+            {% else %}
+              <p class="text-body-secondary mb-0">Not a member of any groups.</p>
+            {% endif %}
+          {# Direct permissions (assigned to the user, not via groups) #}
+          {% if direct_permission_sections %}
+            <h3 class="h6 mt-4 mb-2">Direct permissions</h3>
+            <dl class="row mb-0">
+              {% for sec in direct_permission_sections %}
+                <dt class="col-4 col-sm-3 col-lg-2">{{ sec.label }}:</dt>
+                <dd class="col-8 col-sm-9 col-lg-10">
+                  {{ sec.models|join:", " }}
+                </dd>
+              {% endfor %}
+            </dl>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock content %}

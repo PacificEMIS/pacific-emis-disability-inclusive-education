@@ -1,0 +1,26 @@
+{{ emis_context }} Disability Inclusive Education: New user awaiting role assignment
+================================================================================
+
+Hello,
+
+A new user has signed in to the {{ emis_context }} Disability Inclusive Education app
+and is awaiting role assignment.
+
+New User Details
+----------------
+Name: {% if new_user.first_name or new_user.last_name %}{{ new_user.first_name }} {{ new_user.last_name }}{% else %}Not provided{% endif %}
+Email: {{ new_user.email|default:"Not provided" }}
+Username: {{ new_user.username }}
+Signed in: {{ new_user.date_joined|date:"Y-m-d H:i" }}
+
+Please review this user and assign them as either School Staff (for teachers,
+principals, school-based staff) or System User (for ministry officials,
+analysts, system administrators).
+
+{% if pending_users_url %}
+Review Pending Users: {{ pending_users_url }}
+{% endif %}
+
+--------------------------------------------------------------------------------
+This message was sent by the {{ emis_context }} Disability Inclusive Education app.
+If you believe you received it in error, please contact your EMIS administrator.
