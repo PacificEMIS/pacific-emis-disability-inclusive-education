@@ -618,33 +618,55 @@ def system_user_detail(request, pk):
 
 @login_required
 def dashboard(request):
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+
     # Time window for "recent" counts (e.g. last 30 days)
     now = timezone.now()
     start_period = now - timedelta(days=30)
 
-    # --- Staff KPIs ---
+    # --- User KPIs ---
+    total_users = User.objects.filter(is_superuser=False).count()
+    pending_users_count = User.objects.filter(
+        school_staff__isnull=True,
+        system_user__isnull=True,
+        is_superuser=False,
+    ).count()
+
+    # --- SchoolStaff KPIs ---
     total_staff = SchoolStaff.objects.count()
     staff_added_recent = SchoolStaff.objects.filter(created_at__gte=start_period).count()
 
     # Staff with no assignments (unassigned to any school)
     staff_unassigned = SchoolStaff.objects.filter(assignments__isnull=True).distinct().count()
 
-    # Staff by groups
-    staff_admin_count = (
-        SchoolStaff.objects.filter(user__groups__name="Admins")
-        .distinct()
-        .count()
-    )
-    staff_staff_count = (
-        SchoolStaff.objects.filter(user__groups__name="School Staff")
-        .distinct()
-        .count()
-    )
-    staff_teacher_count = (
-        SchoolStaff.objects.filter(user__groups__name="Teachers")
-        .distinct()
-        .count()
-    )
+    # SchoolStaff breakdown by permission group
+    school_staff_in_admins = SchoolStaff.objects.filter(
+        user__groups__name="Admins"
+    ).distinct().count()
+    school_staff_in_school_admins = SchoolStaff.objects.filter(
+        user__groups__name="School Admins"
+    ).distinct().count()
+    school_staff_in_school_staff = SchoolStaff.objects.filter(
+        user__groups__name="School Staff"
+    ).distinct().count()
+    school_staff_in_teachers = SchoolStaff.objects.filter(
+        user__groups__name="Teachers"
+    ).distinct().count()
+
+    # --- SystemUser KPIs ---
+    total_system_users = SystemUser.objects.count()
+
+    # SystemUser breakdown by permission group
+    system_user_in_admins = SystemUser.objects.filter(
+        user__groups__name="Admins"
+    ).distinct().count()
+    system_user_in_system_admins = SystemUser.objects.filter(
+        user__groups__name="System Admins"
+    ).distinct().count()
+    system_user_in_system_staff = SystemUser.objects.filter(
+        user__groups__name="System Staff"
+    ).distinct().count()
 
     # --- Student KPIs ---
     total_students = Student.objects.count()
@@ -762,13 +784,22 @@ def dashboard(request):
 
     context = {
         "active": "dashboard",
-        # Staff KPIs
+        # User KPIs
+        "total_users": total_users,
+        "pending_users_count": pending_users_count,
+        # SchoolStaff KPIs
         "total_staff": total_staff,
         "staff_added_recent": staff_added_recent,
         "staff_unassigned": staff_unassigned,
-        "staff_admin_count": staff_admin_count,
-        "staff_staff_count": staff_staff_count,
-        "staff_teacher_count": staff_teacher_count,
+        "school_staff_in_admins": school_staff_in_admins,
+        "school_staff_in_school_admins": school_staff_in_school_admins,
+        "school_staff_in_school_staff": school_staff_in_school_staff,
+        "school_staff_in_teachers": school_staff_in_teachers,
+        # SystemUser KPIs
+        "total_system_users": total_system_users,
+        "system_user_in_admins": system_user_in_admins,
+        "system_user_in_system_admins": system_user_in_system_admins,
+        "system_user_in_system_staff": system_user_in_system_staff,
         # Student KPIs
         "total_students": total_students,
         "students_added_recent": students_added_recent,

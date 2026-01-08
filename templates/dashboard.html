@@ -13,31 +13,10 @@
     </div>
   </div>
 
-  <!-- KPI cards: staff / students / schools -->
+  <!-- KPI cards: students / schools -->
   <div class="row g-3">
-    <!-- Total Staff (with added + unassigned) -->
-    <div class="col-12 col-sm-6 col-lg-4">
-      <div class="card shadow-sm h-100">
-        <div class="card-body">
-          <div class="d-flex align-items-center justify-content-between">
-            <span class="text-body-secondary">Total Staff</span>
-            <i class="bi bi-people fs-4"></i>
-          </div>
-          <div class="display-6 fw-semibold mt-2">
-            {{ total_staff|default:"0" }}
-          </div>
-          <div class="small mt-1 text-body-secondary">
-            {{ staff_added_recent|default:"0" }} added in the last 30 days
-          </div>
-          <div class="small mt-1 text-body-secondary">
-            {{ staff_unassigned|default:"0" }} unassigned (no school memberships)
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- Total Students -->
-    <div class="col-12 col-sm-6 col-lg-4">
+    <div class="col-12 col-sm-6">
       <div class="card shadow-sm h-100">
         <div class="card-body">
           <div class="d-flex align-items-center justify-content-between">
@@ -55,7 +34,7 @@
     </div>
 
     <!-- Active Schools -->
-    <div class="col-12 col-sm-6 col-lg-4">
+    <div class="col-12 col-sm-6">
       <div class="card shadow-sm h-100">
         <div class="card-body">
           <div class="d-flex align-items-center justify-content-between">
@@ -73,54 +52,66 @@
     </div>
   </div>
 
-  <!-- Staff permission breakdown -->
+  <!-- User breakdown by type -->
   <div class="row g-3 mt-2">
-    <div class="col-12 col-sm-6 col-lg-4">
+    <div class="col-12 col-lg-4">
       <div class="card shadow-sm h-100">
         <div class="card-body py-3">
           <div class="d-flex align-items-center justify-content-between">
-            <span class="text-body-secondary">Admins</span>
-            <i class="bi bi-shield-lock fs-5"></i>
+            <span class="text-body-secondary">Total Users</span>
+            <i class="bi bi-person-check fs-5"></i>
           </div>
-          <div class="h3 fw-semibold mt-1 mb-0">
-            {{ staff_admin_count|default:"0" }}
+          <div class="h3 fw-semibold mt-1 mb-2">
+            {{ total_users|default:"0" }}
           </div>
           <div class="small text-body-secondary">
-            Staff in the <code>Admins</code> group
+            {% if pending_users_count or total_staff or total_system_users %}
+              {% if pending_users_count %}{{ pending_users_count }} Pending{% endif %}{% if total_staff %}{% if pending_users_count %}, {% endif %}{{ total_staff }} School Staff{% endif %}{% if total_system_users %}{% if pending_users_count or total_staff %}, {% endif %}{{ total_system_users }} MOE Staff{% endif %}
+            {% else %}
+              No users yet
+            {% endif %}
           </div>
         </div>
       </div>
     </div>
 
-    <div class="col-12 col-sm-6 col-lg-4">
+    <div class="col-12 col-lg-4">
       <div class="card shadow-sm h-100">
         <div class="card-body py-3">
           <div class="d-flex align-items-center justify-content-between">
             <span class="text-body-secondary">School Staff</span>
-            <i class="bi bi-person-badge fs-5"></i>
+            <i class="bi bi-people fs-5"></i>
           </div>
-          <div class="h3 fw-semibold mt-1 mb-0">
-            {{ staff_staff_count|default:"0" }}
+          <div class="h3 fw-semibold mt-1 mb-2">
+            {{ total_staff|default:"0" }}
           </div>
           <div class="small text-body-secondary">
-            Staff in the <code>School Staff</code> group
+            {% if school_staff_in_teachers or school_staff_in_school_staff or school_staff_in_school_admins or school_staff_in_admins %}
+              {% if school_staff_in_teachers %}{{ school_staff_in_teachers }} Teacher{{ school_staff_in_teachers|pluralize }}{% endif %}{% if school_staff_in_school_staff %}{% if school_staff_in_teachers %}, {% endif %}{{ school_staff_in_school_staff }} School Staff{% endif %}{% if school_staff_in_school_admins %}{% if school_staff_in_teachers or school_staff_in_school_staff %}, {% endif %}{{ school_staff_in_school_admins }} School Admin{{ school_staff_in_school_admins|pluralize }}{% endif %}{% if school_staff_in_admins %}{% if school_staff_in_teachers or school_staff_in_school_staff or school_staff_in_school_admins %}, {% endif %}{{ school_staff_in_admins }} Admin{{ school_staff_in_admins|pluralize }}{% endif %}
+            {% else %}
+              No group assignments yet
+            {% endif %}
           </div>
         </div>
       </div>
     </div>
 
-    <div class="col-12 col-sm-6 col-lg-4">
+    <div class="col-12 col-lg-4">
       <div class="card shadow-sm h-100">
         <div class="card-body py-3">
           <div class="d-flex align-items-center justify-content-between">
-            <span class="text-body-secondary">Teachers</span>
-            <i class="bi bi-person-video3 fs-5"></i>
+            <span class="text-body-secondary">MOE Staff</span>
+            <i class="bi bi-bank fs-5"></i>
           </div>
-          <div class="h3 fw-semibold mt-1 mb-0">
-            {{ staff_teacher_count|default:"0" }}
+          <div class="h3 fw-semibold mt-1 mb-2">
+            {{ total_system_users|default:"0" }}
           </div>
           <div class="small text-body-secondary">
-            Staff in the <code>Teachers</code> group
+            {% if system_user_in_admins or system_user_in_system_admins or system_user_in_system_staff %}
+              {% if system_user_in_admins %}{{ system_user_in_admins }} Admin{{ system_user_in_admins|pluralize }}{% endif %}{% if system_user_in_system_admins %}{% if system_user_in_admins %}, {% endif %}{{ system_user_in_system_admins }} System Admin{{ system_user_in_system_admins|pluralize }}{% endif %}{% if system_user_in_system_staff %}{% if system_user_in_admins or system_user_in_system_admins %}, {% endif %}{{ system_user_in_system_staff }} System Staff{% endif %}
+            {% else %}
+              No group assignments yet
+            {% endif %}
           </div>
         </div>
       </div>
