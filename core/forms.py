@@ -3,7 +3,7 @@ from django.contrib.auth.models import Group
 from django.forms import ModelForm
 
 from core.models import SchoolStaff, SchoolStaffAssignment, Student, StudentSchoolEnrolment, SystemUser
-from core.permissions import is_admin, get_user_schools
+from core.permissions import is_admin, is_admins_group, is_school_admin, get_user_schools, GROUP_SYSTEM_ADMINS, _in_group, can_assign_admins_group
 from integrations.models import EmisSchool, EmisWarehouseYear, EmisClassLevel
 from core.cft_meta import CFT_QUESTION_META
 
@@ -48,6 +48,87 @@ class SchoolStaffAssignmentForm(ModelForm):
         else:
             # No user context - restrict to nothing
             self.fields["school"].queryset = EmisSchool.objects.none()
+
+
+class SchoolStaffEditForm(forms.Form):
+    """
+    Form to edit an existing School Staff member.
+
+    - Django Super Users and Admins group: can edit all fields including all groups
+    - School Admins group: can edit staff_type and groups, but cannot assign Admins group
+    """
+
+    staff_type = forms.ChoiceField(
+        label="Staff type",
+        choices=SchoolStaff.STAFF_TYPE_CHOICES,
+        widget=forms.Select(attrs={"class": "form-select form-select-sm"}),
+        help_text="Whether this staff member is teaching or non-teaching.",
+    )
+
+    groups = forms.ModelMultipleChoiceField(
+        label="Groups",
+        queryset=Group.objects.all().order_by("name"),
+        required=True,
+        widget=forms.CheckboxSelectMultiple(attrs={"class": "form-check-input"}),
+        help_text="Select at least one group to assign permissions.",
+    )
+
+    def __init__(self, *args, user=None, school_staff=None, **kwargs):
+        """
+        Initialize form with user context to control group field visibility.
+
+        Args:
+            user: The user editing the school staff (for permission filtering)
+            school_staff: The SchoolStaff being edited (for initial values)
+        """
+        super().__init__(*args, **kwargs)
+
+        # Determine available groups based on user permissions
+        # Superusers and Admins can assign any school-level group including Admins
+        # System Admins and School Admins can assign school-level groups except Admins
+        self.can_assign_admins = False
+        if user:
+            self.can_assign_admins = user.is_superuser or is_admins_group(user)
+
+        if self.can_assign_admins:
+            school_groups = ["Admins", "School Admins", "School Staff", "Teachers"]
+        else:
+            # System Admins and School Admins cannot assign the Admins group
+            school_groups = ["School Admins", "School Staff", "Teachers"]
+
+        self.fields["groups"].queryset = Group.objects.filter(
+            name__in=school_groups
+        ).order_by("name")
+
+        # Set initial values from the school_staff being edited
+        if school_staff:
+            self.initial["staff_type"] = school_staff.staff_type
+            # Only show groups that are in the available queryset
+            self.initial["groups"] = school_staff.user.groups.filter(
+                name__in=school_groups
+            )
+
+        # Determine if user can edit groups at all
+        self.can_edit_groups = False
+        if user:
+            # Superusers, Admins, System Admins, and School Admins can edit group memberships
+            self.can_edit_groups = (
+                user.is_superuser
+                or is_admins_group(user)
+                or _in_group(user, GROUP_SYSTEM_ADMINS)
+                or is_school_admin(user)
+            )
+
+        # If user cannot edit groups, disable the field
+        if not self.can_edit_groups:
+            self.fields["groups"].disabled = True
+            self.fields["groups"].help_text = (
+                "You do not have permission to change group memberships."
+            )
+        elif not self.can_assign_admins:
+            self.fields["groups"].help_text = (
+                "Select at least one group. Note: Only full Admins can assign the Admins group."
+            )
 
 
 # ============================================================================
@@ -233,6 +314,9 @@ class AssignSchoolStaffForm(forms.Form):
     Form to assign a pending user as School Staff.
 
     Creates a SchoolStaff profile and assigns them to groups.
+
+    - Django Super Users and Admins group: can assign any school-level group including Admins
+    - System Admins group: can assign school-level groups except Admins
     """
 
     staff_type = forms.ChoiceField(
@@ -250,13 +334,28 @@ class AssignSchoolStaffForm(forms.Form):
         help_text="Select at least one group to assign permissions.",
     )
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
-        # Filter to only school-level groups
-        school_groups = ["Admins", "School Admins", "School Staff", "Teachers"]
+
+        # Determine available groups based on user permissions
+        # Superusers and Admins can assign any school-level group including Admins
+        # System Admins can assign school-level groups except Admins
+        self.can_assign_admins = can_assign_admins_group(user) if user else False
+
+        if self.can_assign_admins:
+            school_groups = ["Admins", "School Admins", "School Staff", "Teachers"]
+        else:
+            # System Admins cannot assign the Admins group
+            school_groups = ["School Admins", "School Staff", "Teachers"]
+
         self.fields["groups"].queryset = Group.objects.filter(
             name__in=school_groups
         ).order_by("name")
+
+        if not self.can_assign_admins:
+            self.fields["groups"].help_text = (
+                "Select at least one group. Note: Only full Admins can assign the Admins group."
+            )
 
 
 class AssignSystemUserForm(forms.Form):
@@ -264,6 +363,9 @@ class AssignSystemUserForm(forms.Form):
     Form to assign a pending user as a System User.
 
     Creates a SystemUser profile and assigns them to groups.
+
+    - Django Super Users and Admins group: can assign any system-level group including Admins
+    - System Admins group: can assign system-level groups except Admins
     """
 
     organization = forms.CharField(
@@ -300,10 +402,125 @@ class AssignSystemUserForm(forms.Form):
         help_text="Select at least one group to assign permissions.",
     )
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
-        # Filter to only system-level groups (and Admins which is shared)
-        system_groups = ["Admins", "System Admins", "System Staff"]
+
+        # Determine available groups based on user permissions
+        # Superusers and Admins can assign any system-level group including Admins
+        # System Admins can assign system-level groups except Admins
+        self.can_assign_admins = can_assign_admins_group(user) if user else False
+
+        if self.can_assign_admins:
+            system_groups = ["Admins", "System Admins", "System Staff"]
+        else:
+            # System Admins cannot assign the Admins group
+            system_groups = ["System Admins", "System Staff"]
+
         self.fields["groups"].queryset = Group.objects.filter(
             name__in=system_groups
         ).order_by("name")
+
+        if not self.can_assign_admins:
+            self.fields["groups"].help_text = (
+                "Select at least one group. Note: Only full Admins can assign the Admins group."
+            )
+
+
+class SystemUserEditForm(forms.Form):
+    """
+    Form to edit an existing System User.
+
+    - Django Super Users and Admins group: can edit all fields including all groups
+    - System Admins group: can edit organization/position and groups, but cannot assign Admins group
+    """
+
+    organization = forms.CharField(
+        label="Organization",
+        max_length=255,
+        required=False,
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control form-control-sm",
+                "placeholder": "e.g., Ministry of Education",
+            }
+        ),
+        help_text="Organization or department name.",
+    )
+
+    position_title = forms.CharField(
+        label="Position title",
+        max_length=255,
+        required=False,
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control form-control-sm",
+                "placeholder": "e.g., Data Analyst",
+            }
+        ),
+        help_text="Job title or position within the organization.",
+    )
+
+    groups = forms.ModelMultipleChoiceField(
+        label="Groups",
+        queryset=Group.objects.all().order_by("name"),
+        required=True,
+        widget=forms.CheckboxSelectMultiple(attrs={"class": "form-check-input"}),
+        help_text="Select at least one group to assign permissions.",
+    )
+
+    def __init__(self, *args, user=None, system_user=None, **kwargs):
+        """
+        Initialize form with user context to control group field visibility.
+
+        Args:
+            user: The user editing the system user (for permission filtering)
+            system_user: The SystemUser being edited (for initial values)
+        """
+        super().__init__(*args, **kwargs)
+
+        # Determine available groups based on user permissions
+        # Superusers and Admins can assign any system-level group including Admins
+        # System Admins can assign system-level groups except Admins
+        self.can_assign_admins = False
+        if user:
+            self.can_assign_admins = user.is_superuser or is_admins_group(user)
+
+        if self.can_assign_admins:
+            system_groups = ["Admins", "System Admins", "System Staff"]
+        else:
+            # System Admins cannot assign the Admins group
+            system_groups = ["System Admins", "System Staff"]
+
+        self.fields["groups"].queryset = Group.objects.filter(
+            name__in=system_groups
+        ).order_by("name")
+
+        # Set initial values from the system_user being edited
+        if system_user:
+            self.initial["organization"] = system_user.organization or ""
+            self.initial["position_title"] = system_user.position_title or ""
+            # Only show groups that are in the available queryset
+            self.initial["groups"] = system_user.user.groups.filter(
+                name__in=system_groups
+            )
+
+        # Determine if user can edit groups at all
+        self.can_edit_groups = False
+        if user:
+            # Superusers, Admins, and System Admins can edit group memberships
+            self.can_edit_groups = (
+                user.is_superuser
+                or is_admins_group(user)
+                or _in_group(user, GROUP_SYSTEM_ADMINS)
+            )
+
+        # If user cannot edit groups, disable the field
+        if not self.can_edit_groups:
+            self.fields["groups"].disabled = True
+            self.fields["groups"].help_text = (
+                "You do not have permission to change group memberships."
+            )
+        elif not self.can_assign_admins:
+            self.fields["groups"].help_text = (
+                "Select at least one group. Note: Only full Admins can assign the Admins group."
+            )

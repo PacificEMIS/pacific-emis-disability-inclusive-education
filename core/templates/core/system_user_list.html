@@ -87,6 +87,10 @@
               <td class="text-end">
                 <a href="{% url 'core:system_user_detail' system_user.pk %}"
                    class="btn btn-sm btn-outline-primary">View</a>
+                {% if user_can_edit %}
+                  <a href="{% url 'core:system_user_edit' system_user.pk %}"
+                     class="btn btn-sm btn-outline-secondary ms-1">Edit</a>
+                {% endif %}
               </td>
             </tr>
           {% empty %}

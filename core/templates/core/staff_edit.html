@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Edit {{ staff.user.get_full_name|default:staff.user.username }}{% endblock title %}
+{% block content %}
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item">
+        <a href="{% url 'core:staff_list' %}">Staff</a>
+      </li>
+      <li class="breadcrumb-item">
+        <a href="{% url 'core:staff_detail' staff.pk %}">{{ staff.user.get_full_name|default:staff.user.username }}</a>
+      </li>
+      <li class="breadcrumb-item active" aria-current="page">Edit</li>
+    </ol>
+  </nav>
+
+  <div class="row">
+    <div class="col-12 col-lg-8">
+      <div class="card shadow-sm">
+        <div class="card-header">
+          <h1 class="h5 mb-0">Edit Staff Member</h1>
+        </div>
+        <div class="card-body">
+          <!-- User Info (read-only) -->
+          <div class="alert alert-light border mb-4">
+            <h2 class="h6 mb-2">User account:</h2>
+            <dl class="row mb-0 small">
+              <dt class="col-sm-3">Name</dt>
+              <dd class="col-sm-9">
+                {% if staff.user.first_name or staff.user.last_name %}
+                  {{ staff.user.first_name }} {{ staff.user.last_name }}
+                {% else %}
+                  <span class="text-body-secondary">Not set</span>
+                {% endif %}
+              </dd>
+              <dt class="col-sm-3">Email</dt>
+              <dd class="col-sm-9">{{ staff.user.email|default:"Not set" }}</dd>
+              <dt class="col-sm-3">Username</dt>
+              <dd class="col-sm-9">{{ staff.user.username }}</dd>
+              <dt class="col-sm-3">Status</dt>
+              <dd class="col-sm-9 mb-0">
+                {% if staff.user.is_active %}
+                  <span class="badge text-bg-success">Active</span>
+                {% else %}
+                  <span class="badge text-bg-secondary">Inactive</span>
+                {% endif %}
+              </dd>
+            </dl>
+          </div>
+
+          <form method="post">
+            {% csrf_token %}
+
+            <!-- Staff Type -->
+            <div class="mb-3">
+              <label for="id_staff_type" class="form-label">{{ form.staff_type.label }}</label>
+              {{ form.staff_type }}
+              {% if form.staff_type.help_text %}
+                <div class="form-text">{{ form.staff_type.help_text }}</div>
+              {% endif %}
+              {% if form.staff_type.errors %}
+                <div class="invalid-feedback d-block">{{ form.staff_type.errors|join:", " }}</div>
+              {% endif %}
+            </div>
+
+            <!-- Groups -->
+            <div class="mb-3">
+              <label class="form-label">
+                {{ form.groups.label }}
+                {% if can_edit_groups %}<span class="text-danger">*</span>{% endif %}
+              </label>
+              {% if form.groups.help_text %}
+                <div class="form-text mb-2">{{ form.groups.help_text }}</div>
+              {% endif %}
+              <div class="border rounded p-3 {% if can_edit_groups %}bg-light{% else %}bg-body-secondary{% endif %}">
+                {% for choice in form.groups %}
+                  <div class="form-check">
+                    {{ choice.tag }}
+                    <label class="form-check-label {% if not can_edit_groups %}text-body-secondary{% endif %}" for="{{ choice.id_for_label }}">
+                      {{ choice.choice_label }}
+                    </label>
+                  </div>
+                {% endfor %}
+              </div>
+              {% if form.groups.errors %}
+                <div class="invalid-feedback d-block">{{ form.groups.errors|join:", " }}</div>
+              {% endif %}
+            </div>
+
+            <hr>
+
+            <div class="d-flex justify-content-between">
+              <a href="{% url 'core:staff_detail' staff.pk %}" class="btn btn-outline-secondary">
+                Cancel
+              </a>
+              <button type="submit" class="btn btn-primary">
+                Save changes
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Help Panel -->
+    <div class="col-12 col-lg-4 mt-3 mt-lg-0">
+      <div class="card shadow-sm">
+        <div class="card-header">
+          <h2 class="h6 mb-0">About Group Permissions</h2>
+        </div>
+        <div class="card-body small">
+          <dl class="mb-0">
+            <dt>Admins</dt>
+            <dd class="text-body-secondary">Full system access including user management and group assignments</dd>
+            <dt>School Admins</dt>
+            <dd class="text-body-secondary">School-scoped admin access for staff and students at their assigned schools</dd>
+            <dt>School Staff</dt>
+            <dd class="text-body-secondary">Read-only access at their assigned schools</dd>
+            <dt>Teachers</dt>
+            <dd class="text-body-secondary mb-0">Can add and edit students at their assigned schools</dd>
+          </dl>
+          {% if not can_edit_groups %}
+            <hr>
+            <p class="text-body-secondary mb-0">
+              <strong>Note:</strong> Only Django Super Users and users in the Admins group can change group memberships.
+            </p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock content %}

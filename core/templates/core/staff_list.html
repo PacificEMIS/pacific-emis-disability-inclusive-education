@@ -173,6 +173,10 @@
                 <td class="text-end">
                   <a href="{% url 'core:staff_detail' s.id %}"
                      class="btn btn-sm btn-outline-primary">View</a>
+                  {% if user_can_edit %}
+                    <a href="{% url 'core:staff_edit' s.id %}"
+                       class="btn btn-sm btn-outline-secondary ms-1">Edit</a>
+                  {% endif %}
                 </td>
               </tr>
             {% endfor %}

@@ -14,19 +14,23 @@ from threading import Thread
 User = get_user_model()
 
 
-def _get_admin_emails():
+def _get_pending_user_manager_emails():
     """
-    Return emails of all active users in the 'Admins' group.
+    Return emails of all active users who can manage pending users.
+
+    This includes users in the 'Admins' and 'System Admins' groups.
     """
-    try:
-        group = Group.objects.get(name="Admins")
-    except Group.DoesNotExist:
+    groups = Group.objects.filter(name__in=["Admins", "System Admins"])
+
+    if not groups.exists():
         return []
 
+    # Get all users in either group, deduplicated
     qs = (
-        group.user_set.filter(is_active=True)
+        User.objects.filter(groups__in=groups, is_active=True)
         .exclude(email__isnull=True)
         .exclude(email__exact="")
+        .distinct()
     )
     return [u.email for u in qs]
 
@@ -178,21 +182,21 @@ def send_student_created_email_async(
 
 
 # ============================================================================
-# New Pending User Email (for Admins)
+# New Pending User Email (for Admins and System Admins)
 # ============================================================================
 
 
 def send_new_pending_user_email(*, new_user, pending_users_url=None):
     """
-    Send HTML + text email to Admins when a new user signs up via Google OAuth.
+    Send HTML + text email when a new user signs up via Google OAuth.
 
-    Recipients: all users in the "Admins" group.
+    Recipients: all users in the "Admins" and "System Admins" groups.
     """
-    # Get all Admins group emails
-    recipients = _get_admin_emails()
+    # Get emails of users who can manage pending users
+    recipients = _get_pending_user_manager_emails()
 
     if not recipients:
-        logger.info("send_new_pending_user_email: no admin recipients, skipping.")
+        logger.info("send_new_pending_user_email: no recipients, skipping.")
         return
 
     context = {

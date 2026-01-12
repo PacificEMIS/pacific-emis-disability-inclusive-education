@@ -19,12 +19,10 @@
     <div class="d-flex gap-2">
       <a href="{% url 'core:staff_list' %}"
          class="btn btn-sm btn-outline-secondary">← Back to staff</a>
-      {# placeholder for future staff edit #}
-      {# {% if user.is_superuser or perms.accounts.change_staff %} #}
-      {#   <button type="button" class="btn btn-sm btn-primary" disabled> #}
-      {#     Edit (coming soon) #}
-      {#   </button> #}
-      {# {% endif %} #}
+      {% if can_edit %}
+        <a href="{% url 'core:staff_edit' staff.pk %}"
+           class="btn btn-sm btn-outline-primary">Edit</a>
+      {% endif %}
     </div>
   </div>
   {# FIRST ROW: Profile + Permissions #}

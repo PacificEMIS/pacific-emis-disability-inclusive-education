@@ -36,7 +36,7 @@ from django.contrib.auth.models import Group
 from django.db.models import Q, QuerySet
 
 from integrations.models import EmisSchool
-from core.models import SchoolStaff, SchoolStaffAssignment, Student, StudentSchoolEnrolment
+from core.models import SchoolStaff, SchoolStaffAssignment, Student, StudentSchoolEnrolment, SystemUser
 
 # ============================================================================
 # Group names (single source of truth)
@@ -270,6 +270,57 @@ def filter_staff_for_user(qs: QuerySet, user) -> QuerySet:
     # Filter by staff who have assignments at schools the user has access to
     # Using the annotated latest_school_no field from the view
     return qs.filter(latest_school_no__in=allowed_school_nos)
+
+
+def can_edit_staff(user, staff: SchoolStaff) -> bool:
+    """
+    Who can *edit* a school staff member (staff_type, groups)?
+
+    - Superusers: always.
+    - Admins group: always.
+    - System Admins group: always (system-wide access).
+    - School Admins group: yes, but must have school access to the staff member.
+    - Others: never.
+    """
+    if not user or not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    if is_admins_group(user):
+        return True
+    if _in_group(user, GROUP_SYSTEM_ADMINS):
+        # System admins have system-wide access to all staff
+        return True
+    if is_school_admin(user):
+        # School admins can only edit staff they have school access to
+        return user_has_school_access_to_staff(user, staff)
+    return False
+
+
+def can_edit_staff_groups(user, staff: SchoolStaff) -> bool:
+    """
+    Who can *change group memberships* for a school staff member?
+
+    - Superusers: always (can assign any group including Admins).
+    - Admins group: always (can assign any group including Admins).
+    - System Admins group: yes, but cannot assign the Admins group.
+    - School Admins group: yes, but cannot assign the Admins group.
+      Must have school access to the staff member.
+    - Others: never.
+    """
+    if not user or not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    if is_admins_group(user):
+        return True
+    if _in_group(user, GROUP_SYSTEM_ADMINS):
+        # System admins can edit groups for any staff
+        return True
+    if is_school_admin(user):
+        # School admins can edit groups for staff they have school access to
+        return user_has_school_access_to_staff(user, staff)
+    return False
 
 
 def can_create_staff_assignment(user, target_school=None) -> bool:
@@ -547,3 +598,110 @@ def get_allowed_enrolment_schools(user):
 
     # Staff and other users are read-only
     return EmisSchool.objects.none()
+
+
+# ============================================================================
+# SystemUser Permissions
+# ============================================================================
+
+
+def can_view_system_user(user, system_user: SystemUser) -> bool:
+    """
+    Who can *view* a system user?
+
+    - Superusers: always.
+    - Admins group: always.
+    - System Admins group: always.
+    - System Staff group: always.
+    - Others: never.
+
+    Note: This is already enforced by is_system_level_user() in views,
+    but this function provides a consistent API for permission checks.
+    """
+    if not user or not user.is_authenticated:
+        return False
+    return is_system_level_user(user)
+
+
+def can_edit_system_user(user, system_user: SystemUser) -> bool:
+    """
+    Who can *edit* a system user (organization, position, groups)?
+
+    - Superusers: always.
+    - Admins group: always (including group membership changes).
+    - System Admins group: can edit organization/position, but NOT groups.
+    - System Staff group: never (read-only).
+    - Others: never.
+    """
+    if not user or not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    if is_admins_group(user):
+        return True
+    if _in_group(user, GROUP_SYSTEM_ADMINS):
+        return True
+    return False
+
+
+def can_edit_system_user_groups(user, system_user: SystemUser) -> bool:
+    """
+    Who can *change group memberships* for a system user?
+
+    - Superusers: always (can assign any group including Admins).
+    - Admins group: always (can assign any group including Admins).
+    - System Admins group: yes, but cannot assign the Admins group.
+    - Others: never.
+    """
+    if not user or not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    if is_admins_group(user):
+        return True
+    if _in_group(user, GROUP_SYSTEM_ADMINS):
+        return True
+    return False
+
+
+# ============================================================================
+# Pending Users Permissions
+# ============================================================================
+
+
+def can_manage_pending_users(user) -> bool:
+    """
+    Who can manage pending users (view list, assign roles, delete)?
+
+    - Superusers: always.
+    - Admins group: always.
+    - System Admins group: yes.
+    - Others: never.
+    """
+    if not user or not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    if is_admins_group(user):
+        return True
+    if _in_group(user, GROUP_SYSTEM_ADMINS):
+        return True
+    return False
+
+
+def can_assign_admins_group(user) -> bool:
+    """
+    Who can assign the 'Admins' group to users?
+
+    - Superusers: always.
+    - Admins group: yes.
+    - System Admins group: NO (they cannot elevate to Admins).
+    - Others: never.
+    """
+    if not user or not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    if is_admins_group(user):
+        return True
+    return False
