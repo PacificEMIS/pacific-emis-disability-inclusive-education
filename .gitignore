@@ -203,6 +203,11 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 
+# Claude Code
+#  Claude Code is Anthropic's CLI for Claude. The .claude directory contains local project
+#  settings and conversation history which should not be committed to version control.
+.claude/
+
 # Marimo
 marimo/_static/
 marimo/_lsp/
