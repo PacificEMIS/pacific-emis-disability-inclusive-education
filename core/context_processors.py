@@ -6,7 +6,7 @@ Provides template context variables related to user profiles (SchoolStaff, Syste
 
 from django.urls import reverse
 from core.models import SchoolStaff, SystemUser
-from core.permissions import is_admin, is_admins_group, is_system_level_user
+from core.permissions import is_admin, is_system_level_user, can_manage_pending_users
 
 
 def staff_context(request):
@@ -16,7 +16,7 @@ def staff_context(request):
 
     Also adds:
     - is_admin_user: True for Admins or System Admins (general admin features)
-    - is_admins_group_user: True only for Admins group (Pending Users management)
+    - can_manage_pending_users: True for Admins or System Admins (Pending Users management)
     - is_system_level_user: True for system-level users (Admins, System Admins, System Staff)
     """
     user = request.user
@@ -25,15 +25,15 @@ def staff_context(request):
         "system_user_pk_for_request_user": None,
         "user_profile_url": None,
         "is_admin_user": False,
-        "is_admins_group_user": False,
+        "can_manage_pending_users": False,
         "is_system_level_user": False,
     }
 
     if user.is_authenticated:
         # Check if user is an admin (for showing admin-only menu items)
         context["is_admin_user"] = is_admin(user)
-        # Check if user is specifically in the Admins group (for Pending Users)
-        context["is_admins_group_user"] = is_admins_group(user)
+        # Check if user can manage pending users (Admins or System Admins)
+        context["can_manage_pending_users"] = can_manage_pending_users(user)
         # Check if user is a system-level user (for Staff UI visibility)
         context["is_system_level_user"] = is_system_level_user(user)
         # Check for SchoolStaff profile first

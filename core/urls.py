@@ -15,6 +15,7 @@ urlpatterns = [
     # School Staff
     path("staff/", views.staff_list, name="staff_list"),
     path("staff/<int:pk>/", views.staff_detail, name="staff_detail"),
+    path("staff/<int:pk>/edit/", views.staff_edit, name="staff_edit"),
     path(
         "staff/<int:staff_id>/assignment/<int:pk>/edit/",
         views.staff_assignment_edit,
@@ -29,6 +30,7 @@ urlpatterns = [
     # System Users
     path("system-users/", views.system_user_list, name="system_user_list"),
     path("system-users/<int:pk>/", views.system_user_detail, name="system_user_detail"),
+    path("system-users/<int:pk>/edit/", views.system_user_edit, name="system_user_edit"),
 
     # Students
     path("students/", views.student_list, name="student_list"),

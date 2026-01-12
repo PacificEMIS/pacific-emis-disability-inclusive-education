@@ -1,14 +1,21 @@
 {% extends "base.html" %}
 {% block title %}{{ system_user.user.get_full_name|default:system_user.user.username }}{% endblock title %}
 {% block content %}
-  <nav aria-label="breadcrumb">
-    <ol class="breadcrumb">
-      <li class="breadcrumb-item">
-        <a href="{% url 'core:system_user_list' %}">{{ terminology.system_users_plural }}</a>
-      </li>
-      <li class="breadcrumb-item active" aria-current="page">{{ system_user.user.get_full_name|default:system_user.user.username }}</li>
-    </ol>
-  </nav>
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb mb-0">
+        <li class="breadcrumb-item">
+          <a href="{% url 'core:system_user_list' %}">{{ terminology.system_users_plural }}</a>
+        </li>
+        <li class="breadcrumb-item active" aria-current="page">{{ system_user.user.get_full_name|default:system_user.user.username }}</li>
+      </ol>
+    </nav>
+    {% if can_edit %}
+      <a href="{% url 'core:system_user_edit' system_user.pk %}" class="btn btn-sm btn-outline-primary">
+        Edit
+      </a>
+    {% endif %}
+  </div>
   {# FIRST ROW: Profile + Permissions #}
   <div class="row g-3">
     <!-- Profile / account summary -->

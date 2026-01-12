@@ -124,6 +124,8 @@ class Command(BaseCommand):
             ],
             # School Admins - Can manage staff and students at their schools
             GROUP_SCHOOL_ADMINS: [
+                # Auth - Can change user (for group membership management)
+                "auth.change_user",
                 # Core app - Staff
                 "core.add_schoolstaff",
                 "core.add_schoolstaffassignment",
@@ -190,10 +192,11 @@ class Command(BaseCommand):
             ],
             # System Admins - System-wide admin access
             GROUP_SYSTEM_ADMINS: [
-                # Account/Auth (view)
+                # Account/Auth (view + change user for group management)
                 "account.view_emailaddress",
                 "account.view_emailconfirmation",
                 "admin.view_logentry",
+                "auth.change_user",
                 # Core app - Staff
                 "core.add_schoolstaff",
                 "core.add_schoolstaffassignment",
