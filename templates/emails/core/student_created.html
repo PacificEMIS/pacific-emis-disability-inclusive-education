@@ -28,11 +28,17 @@
   <p class="ie-kv">
     <span class="ie-kv-label">Name:</span>
     {{ student.first_name }} {{ student.last_name }}
-  </p>
-  <p class="ie-kv">
+    <br />
     <span class="ie-kv-label">Date of birth:</span>
     {% if student.date_of_birth %}
       {{ student.date_of_birth|date:"Y-m-d" }}
+    {% else %}
+      <span class="ie-muted">Not recorded</span>
+    {% endif %}
+    <br />
+    <span class="ie-kv-label">Gender:</span>
+    {% if student.gender %}
+      {{ student.get_gender_display }}
     {% else %}
       <span class="ie-muted">Not recorded</span>
     {% endif %}

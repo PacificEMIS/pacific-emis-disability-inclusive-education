@@ -2,6 +2,7 @@ A new disability record has been created.
 
 Student: {{ student.first_name }} {{ student.last_name }}
 Date of birth: {{ student.date_of_birth|date:"Y-m-d" }}
+Gender: {% if student.gender %}{{ student.get_gender_display }}{% else %}Not recorded{% endif %}
 
 School: {% if enrolment.school %}{{ enrolment.school.emis_school_name }}{% else %}N/A{% endif %}
 School year: {% if enrolment.school_year %}{{ enrolment.school_year.code }}{% else %}N/A{% endif %}

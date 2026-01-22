@@ -362,9 +362,14 @@ class Student(models.Model):
         last_updated_by (User): Who last modified this record
     """
 
+    class Gender(models.IntegerChoices):
+        MALE = 1, "Male"
+        FEMALE = 2, "Female"
+
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     date_of_birth = models.DateField()
+    gender = models.IntegerField(choices=Gender.choices, null=True, blank=True)
 
     # Many-to-many relationship with schools (through StudentSchoolEnrolment)
     schools = models.ManyToManyField(

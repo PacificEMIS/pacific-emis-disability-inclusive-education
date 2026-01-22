@@ -38,6 +38,14 @@
             <dd class="col-7 col-sm-8">
               {{ student.date_of_birth|date:"Y-m-d" }}
             </dd>
+            <dt class="col-5 col-sm-4">Gender</dt>
+            <dd class="col-7 col-sm-8">
+              {% if student.gender %}
+                {{ student.get_gender_display }}
+              {% else %}
+                <span class="text-body-secondary">Not recorded</span>
+              {% endif %}
+            </dd>
             <dt class="col-5 col-sm-4">Current school(s)</dt>
             <dd class="col-7 col-sm-8">
               {% if student.current_school_names %}

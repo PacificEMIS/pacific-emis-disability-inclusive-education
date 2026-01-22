@@ -144,7 +144,7 @@ class StudentCoreForm(forms.ModelForm):
 
     class Meta:
         model = Student
-        fields = ["first_name", "last_name", "date_of_birth"]
+        fields = ["first_name", "last_name", "date_of_birth", "gender"]
         widgets = {
             "first_name": forms.TextInput(
                 attrs={"class": "form-control form-control-sm"}
@@ -155,6 +155,7 @@ class StudentCoreForm(forms.ModelForm):
             "date_of_birth": forms.DateInput(
                 attrs={"type": "date", "class": "form-control form-control-sm"}
             ),
+            "gender": forms.Select(attrs={"class": "form-select form-select-sm"}),
         }
 
 
@@ -182,6 +183,14 @@ class StudentDisabilityIntakeForm(forms.Form):
         widget=forms.DateInput(
             attrs={"type": "date", "class": "form-control form-control-sm"}
         ),
+    )
+    gender = forms.TypedChoiceField(
+        label="Gender",
+        choices=[("", "— Select —")] + list(Student.Gender.choices),
+        required=False,
+        coerce=int,
+        empty_value=None,
+        widget=forms.Select(attrs={"class": "form-select form-select-sm"}),
     )
 
     # --- Enrolment core ---
