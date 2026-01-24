@@ -1245,6 +1245,7 @@ def student_new(request):
                         first_name=cd["first_name"].strip(),
                         last_name=cd["last_name"].strip(),
                         date_of_birth=cd["date_of_birth"],
+                        gender=cd.get("gender"),
                         created_by=request.user,
                         last_updated_by=request.user,
                     )
