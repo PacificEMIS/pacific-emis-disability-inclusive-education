@@ -7,53 +7,66 @@
   <div class="d-flex align-items-center justify-content-between flex-wrap flex-md-nowrap mb-4">
     <h1 class="h3 mb-0">Dashboard</h1>
     <div class="btn-toolbar">
-      <div class="btn-group me-2">        
+      <div class="btn-group me-2">
         <a href="#" class="btn btn-sm btn-outline-secondary">Refresh</a>
       </div>
     </div>
   </div>
 
-  <!-- KPI cards: students / schools -->
   <div class="row g-3">
-    <!-- Total Students -->
     <div class="col-12 col-sm-6">
       <div class="card shadow-sm h-100">
         <div class="card-body">
           <div class="d-flex align-items-center justify-content-between">
-            <span class="text-body-secondary">Total Students</span>
+            <span class="text-body-secondary">Total Students (with Disability Records)</span>
             <i class="bi bi-mortarboard fs-4"></i>
           </div>
           <div class="display-6 fw-semibold mt-2">
             {{ total_students|default:"0" }}
           </div>
+          {% if is_system_level_dashboard %}
           <div class="small mt-1 text-body-secondary">
             {{ students_added_recent|default:"0" }} added in the last 30 days
           </div>
+          {% else %}
+          <div class="small mt-1 text-body-secondary">
+            From your assigned schools
+          </div>
+          {% endif %}
         </div>
       </div>
     </div>
 
-    <!-- Active Schools -->
     <div class="col-12 col-sm-6">
       <div class="card shadow-sm h-100">
         <div class="card-body">
           <div class="d-flex align-items-center justify-content-between">
-            <span class="text-body-secondary">Active Schools</span>
+            <span class="text-body-secondary">{% if is_system_level_dashboard %}Active Schools{% else %}My Active Schools{% endif %}</span>
             <i class="bi bi-building fs-4"></i>
           </div>
           <div class="display-6 fw-semibold mt-2">
             {{ active_schools|default:"0" }}
           </div>
           <div class="small mt-1 text-body-secondary">
-            {{ schools_with_disability_data|default:"0" }} with recorded disability surveys
+            {% if is_system_level_dashboard %}
+              {{ schools_with_disability_data|default:"0" }} with recorded disability surveys
+            {% else %}
+              {% if user_school_info %}
+                {% for school in user_school_info %}
+                  {{ school.emis_school_no }}: {{ school.emis_school_name }}{% if not forloop.last %}, {% endif %}
+                {% endfor %}
+              {% else %}
+                No schools assigned
+              {% endif %}
+            {% endif %}
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- User breakdown by type -->
   <div class="row g-3 mt-2">
+    {% if is_system_level_dashboard %}
     <div class="col-12 col-lg-4">
       <div class="card shadow-sm h-100">
         <div class="card-body py-3">
@@ -74,12 +87,13 @@
         </div>
       </div>
     </div>
+    {% endif %}
 
-    <div class="col-12 col-lg-4">
+    <div class="col-12 {% if is_system_level_dashboard %}col-lg-4{% else %}col-lg-6{% endif %}">
       <div class="card shadow-sm h-100">
         <div class="card-body py-3">
           <div class="d-flex align-items-center justify-content-between">
-            <span class="text-body-secondary">School Staff</span>
+            <span class="text-body-secondary">{% if is_system_level_dashboard %}School Staff{% else %}Total Staff{% endif %}</span>
             <i class="bi bi-people fs-5"></i>
           </div>
           <div class="h3 fw-semibold mt-1 mb-2">
@@ -89,13 +103,45 @@
             {% if school_staff_in_teachers or school_staff_in_school_staff or school_staff_in_school_admins or school_staff_in_admins %}
               {% if school_staff_in_teachers %}{{ school_staff_in_teachers }} Teacher{{ school_staff_in_teachers|pluralize }}{% endif %}{% if school_staff_in_school_staff %}{% if school_staff_in_teachers %}, {% endif %}{{ school_staff_in_school_staff }} School Staff{% endif %}{% if school_staff_in_school_admins %}{% if school_staff_in_teachers or school_staff_in_school_staff %}, {% endif %}{{ school_staff_in_school_admins }} School Admin{{ school_staff_in_school_admins|pluralize }}{% endif %}{% if school_staff_in_admins %}{% if school_staff_in_teachers or school_staff_in_school_staff or school_staff_in_school_admins %}, {% endif %}{{ school_staff_in_admins }} Admin{{ school_staff_in_admins|pluralize }}{% endif %}
             {% else %}
-              No group assignments yet
+              No staff found
             {% endif %}
           </div>
         </div>
       </div>
     </div>
 
+    {% if not is_system_level_dashboard %}
+    <div class="col-12 col-lg-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between">
+            <span class="text-body-secondary">Total Enrolments (from {{ emis_context }} Data Warehouse)</span>
+            <i class="bi bi-people-fill fs-4"></i>
+          </div>
+          <div class="display-6 fw-semibold mt-2">
+            {% if total_enrolment is not None %}
+              {{ total_enrolment|default:"0" }}
+            {% else %}
+              <span class="text-muted">N/A</span>
+            {% endif %}
+          </div>
+          <div class="small mt-1 text-body-secondary">
+            {% if total_enrolment is None %}
+              Run <code>emis_sync_warehouse_data</code> command to retrieve data.
+            {% elif enrolment_by_school %}
+              {% for item in enrolment_by_school %}
+                <strong>{{ item.school_code }}: {{ item.school_name }}</strong> (Enrolment: {{ item.total }}, Survey Year: {{ item.survey_year_label }}){% if not forloop.last %}<br>{% endif %}
+              {% endfor %}
+            {% else %}
+              No enrollment data available
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if is_system_level_dashboard %}
     <div class="col-12 col-lg-4">
       <div class="card shadow-sm h-100">
         <div class="card-body py-3">
@@ -116,9 +162,61 @@
         </div>
       </div>
     </div>
+    {% endif %}
   </div>
 
-  <!-- Recent activity -->
+  <div class="card mt-4 shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span class="fw-semibold">Student Files</span>
+      <a class="btn btn-sm btn-outline-secondary" href="{% url 'core:student_list' %}">View all</a>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th scope="col">Student Name</th>
+            <th scope="col">Action</th>
+            <th scope="col">By</th>
+            <th scope="col">Last Updated</th>
+            <th scope="col" class="text-end">Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if student_events %}
+            {% for ev in student_events %}
+              <tr>
+                <td>{{ ev.entity }}</td>
+                <td>{{ ev.action }}</td>
+                <td>
+                  {% if ev.by %}
+                    {{ ev.by }}
+                  {% else %}
+                    <span class="text-body-secondary">system</span>
+                  {% endif %}
+                </td>
+                <td>{{ ev.when|date:"Y-m-d H:i" }}</td>
+                <td class="text-end">
+                  {% if ev.url %}
+                    <a class="btn btn-sm btn-outline-primary" href="{{ ev.url }}">Open</a>
+                  {% else %}
+                    <span class="text-body-secondary small">N/A</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="5" class="text-center text-body-secondary py-4">
+                No student files found.
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% if not is_teacher %}
   <div class="card mt-4 shadow-sm">
     <div class="card-header d-flex justify-content-between align-items-center">
       <span class="fw-semibold">Recent Updates</span>
@@ -169,5 +267,6 @@
       </table>
     </div>
   </div>
+  {% endif %}
 
 {% endblock content %}
