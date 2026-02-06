@@ -33,7 +33,12 @@
   }
 } */
 
-/* Card polish */
+/* Fix border rendering in card corners */
 .card {
-  border-radius: .85rem;
+  overflow: hidden;
+}
+
+/* Edge-to-edge tables in cards - remove card-body padding for table containers */
+.card-body.p-0 {
+  padding: 0;
 }
