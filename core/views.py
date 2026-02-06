@@ -5,6 +5,7 @@ Provides CRUD views for managing school staff, their assignments, and students.
 """
 from datetime import timedelta
 
+from django.conf import settings
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.contrib.auth.decorators import login_required
@@ -52,10 +53,17 @@ from core.permissions import (
     is_system_level_user,
     is_admins_group,
     is_school_admin,
+    is_school_staff,
+    is_teacher,
+    is_system_staff,
     can_edit_system_user,
     can_edit_system_user_groups,
+    get_user_schools,
+    GROUP_ADMINS,
     GROUP_SYSTEM_ADMINS,
+    GROUP_SYSTEM_STAFF,
     _in_group,
+    _in_any_group,
 )
 from integrations.models import EmisSchool, EmisClassLevel, EmisWarehouseYear
 
@@ -792,95 +800,306 @@ def system_user_edit(request, pk):
 @login_required
 def dashboard(request):
     from django.contrib.auth import get_user_model
+    from integrations.odata_client import ODataClient
     User = get_user_model()
 
     # Time window for "recent" counts (e.g. last 30 days)
     now = timezone.now()
     start_period = now - timedelta(days=30)
 
+    # ============================================================================
+    # DASHBOARD ROLE-BASED FILTERING
+    # ============================================================================
+    # NOTE: This section determines what dashboard content to show based on user groups.
+    # Future adjustments: Modify the group checks or filtering logic here as requirements evolve.
+    #
+    # Current implementation:
+    # - System-level users (Admins, System Admins, System Staff): See ALL data (full dashboard)
+    # - School-level users (School Admins, School Staff, Teachers): See ONLY data from their assigned schools
+    #
+    # The `is_system_level_dashboard` flag controls which template sections are rendered.
+    # School-level users only see: Total Students, Active Schools, Total Users, Total Staff
+    # (all filtered to their schools only).
+    # ============================================================================
+
+    # Check if user has system-level access (sees everything)
+    is_system_level_dashboard = (
+        request.user.is_superuser
+        or _in_any_group(request.user, GROUP_ADMINS, GROUP_SYSTEM_ADMINS, GROUP_SYSTEM_STAFF)
+    )
+
+    # For school-level users, get their assigned schools for filtering
+    user_schools = None
+    user_school_ids = []
+    total_enrolment = 0
+    enrolment_by_school = []
+    enrolment_survey_year = None
+    if not is_system_level_dashboard:
+        user_schools = get_user_schools(request.user)
+        user_school_ids = list(user_schools.values_list("pk", flat=True))
+
+        # Load enrollment data from pre-synced warehouse cache
+        # Data is synced via: python manage.py emis_sync_warehouse_data
+        if user_schools.exists():
+            try:
+                from integrations.odata_client import load_enrollment_cache
+
+                logger.info(f"Dashboard: Loading enrollment data for user {request.user} with {user_schools.count()} schools")
+
+                # Load pre-aggregated enrollment data from filesystem cache
+                enrollment_data = load_enrollment_cache()
+
+                if enrollment_data is None:
+                    logger.warning("Dashboard: No cached enrollment data found. Run 'python manage.py emis_sync_warehouse_data' to sync data.")
+                    total_enrolment = None
+                else:
+                    logger.info(f"Dashboard: Loaded {len(enrollment_data)} pre-aggregated records from cache")
+
+                    # Build fast lookup dictionary from pre-aggregated data
+                    # Key: (SchoolNo, SurveyYear) -> Value: total enrollment
+                    # Data is already aggregated by (SurveyYear, SchoolNo, SchoolName, GenderCode)
+                    # Sum across genders for each school/year combination
+                    school_year_totals = {}
+                    for record in enrollment_data:
+                        school_no = record.get('SchoolNo')
+                        survey_year = record.get('SurveyYear')
+                        enrol = record.get('Enrol') or 0
+
+                        if school_no and survey_year:
+                            key = (school_no, int(survey_year))
+                            school_year_totals[key] = school_year_totals.get(key, 0) + enrol
+
+                    logger.info(f"Dashboard: Built lookup from {len(school_year_totals)} unique (school, year) combinations")
+
+                    # Get available warehouse years, ordered by most recent first
+                    available_years = EmisWarehouseYear.objects.filter(active=True).order_by('-code')
+                    logger.info(f"Dashboard: Found {available_years.count()} active warehouse years")
+
+                    if available_years.exists():
+                        # Try each year until we find data
+                        data_found = False
+                        for year in available_years[:5]:  # Try up to 5 most recent years
+                            logger.info(f"Dashboard: Trying year {year.code} ({year.label})")
+                            temp_enrolment_by_school = []
+                            temp_total = 0
+
+                            # Process each school - using fast dictionary lookup
+                            for school in user_schools.filter(active=True):
+                                key = (school.emis_school_no, int(year.code))
+                                school_total = school_year_totals.get(key, 0)
+
+                                if school_total > 0:
+                                    temp_enrolment_by_school.append({
+                                        'school_code': school.emis_school_no,
+                                        'school_name': school.emis_school_name,
+                                        'total': school_total,
+                                        'survey_year': year.code,
+                                        'survey_year_label': year.label
+                                    })
+                                    data_found = True
+                                    temp_total += school_total
+
+                            # If we found data for this year, use it and stop trying older years
+                            if data_found:
+                                total_enrolment = temp_total
+                                enrolment_by_school = temp_enrolment_by_school
+                                enrolment_survey_year = year
+                                logger.info(f"Dashboard: Successfully found data for year {year.code}, total: {total_enrolment}")
+                                break
+
+                        if not data_found:
+                            logger.warning("Dashboard: No enrollment data found in any available warehouse year")
+                    else:
+                        logger.warning("Dashboard: No active warehouse years found for enrollment data")
+
+            except Exception as e:
+                # Log error but don't break the dashboard
+                logger.warning(f"Dashboard: Error loading enrollment data: {e}", exc_info=True)
+                total_enrolment = None  # Signal that data is unavailable
+        else:
+            logger.info(f"Dashboard: User {request.user} has no school assignments")
+
     # --- User KPIs ---
-    total_users = User.objects.filter(is_superuser=False).count()
-    pending_users_count = User.objects.filter(
-        school_staff__isnull=True,
-        system_user__isnull=True,
-        is_superuser=False,
-    ).count()
+    if is_system_level_dashboard:
+        # System-level users see all users
+        total_users = User.objects.filter(is_superuser=False).count()
+        pending_users_count = User.objects.filter(
+            school_staff__isnull=True,
+            system_user__isnull=True,
+            is_superuser=False,
+        ).count()
+    else:
+        # School-level users see only users from their schools
+        # Users are counted if they have SchoolStaff profile with assignments to the user's schools
+        total_users = User.objects.filter(
+            school_staff__assignments__school_id__in=user_school_ids,
+            school_staff__assignments__end_date__isnull=True,
+            is_superuser=False,
+        ).distinct().count()
+        # Pending users not relevant for school-level users
+        pending_users_count = 0
 
     # --- SchoolStaff KPIs ---
-    total_staff = SchoolStaff.objects.count()
-    staff_added_recent = SchoolStaff.objects.filter(created_at__gte=start_period).count()
+    if is_system_level_dashboard:
+        # System-level users see all staff
+        total_staff = SchoolStaff.objects.count()
+        staff_added_recent = SchoolStaff.objects.filter(created_at__gte=start_period).count()
+        staff_unassigned = SchoolStaff.objects.filter(assignments__isnull=True).distinct().count()
 
-    # Staff with no assignments (unassigned to any school)
-    staff_unassigned = SchoolStaff.objects.filter(assignments__isnull=True).distinct().count()
+        # SchoolStaff breakdown by permission group (system-wide)
+        school_staff_in_admins = SchoolStaff.objects.filter(
+            user__groups__name="Admins"
+        ).distinct().count()
+        school_staff_in_school_admins = SchoolStaff.objects.filter(
+            user__groups__name="School Admins"
+        ).distinct().count()
+        school_staff_in_school_staff = SchoolStaff.objects.filter(
+            user__groups__name="School Staff"
+        ).distinct().count()
+        school_staff_in_teachers = SchoolStaff.objects.filter(
+            user__groups__name="Teachers"
+        ).distinct().count()
+    else:
+        # School-level users see only staff from their schools
+        total_staff = SchoolStaff.objects.filter(
+            assignments__school_id__in=user_school_ids,
+            assignments__end_date__isnull=True,
+        ).distinct().count()
+        staff_added_recent = 0  # Not shown for school-level users
+        staff_unassigned = 0  # Not relevant for school-level users
 
-    # SchoolStaff breakdown by permission group
-    school_staff_in_admins = SchoolStaff.objects.filter(
-        user__groups__name="Admins"
-    ).distinct().count()
-    school_staff_in_school_admins = SchoolStaff.objects.filter(
-        user__groups__name="School Admins"
-    ).distinct().count()
-    school_staff_in_school_staff = SchoolStaff.objects.filter(
-        user__groups__name="School Staff"
-    ).distinct().count()
-    school_staff_in_teachers = SchoolStaff.objects.filter(
-        user__groups__name="Teachers"
-    ).distinct().count()
+        # SchoolStaff breakdown by permission group (school-scoped)
+        school_staff_in_admins = SchoolStaff.objects.filter(
+            assignments__school_id__in=user_school_ids,
+            assignments__end_date__isnull=True,
+            user__groups__name="Admins"
+        ).distinct().count()
+        school_staff_in_school_admins = SchoolStaff.objects.filter(
+            assignments__school_id__in=user_school_ids,
+            assignments__end_date__isnull=True,
+            user__groups__name="School Admins"
+        ).distinct().count()
+        school_staff_in_school_staff = SchoolStaff.objects.filter(
+            assignments__school_id__in=user_school_ids,
+            assignments__end_date__isnull=True,
+            user__groups__name="School Staff"
+        ).distinct().count()
+        school_staff_in_teachers = SchoolStaff.objects.filter(
+            assignments__school_id__in=user_school_ids,
+            assignments__end_date__isnull=True,
+            user__groups__name="Teachers"
+        ).distinct().count()
 
     # --- SystemUser KPIs ---
-    total_system_users = SystemUser.objects.count()
+    if is_system_level_dashboard:
+        total_system_users = SystemUser.objects.count()
 
-    # SystemUser breakdown by permission group
-    system_user_in_admins = SystemUser.objects.filter(
-        user__groups__name="Admins"
-    ).distinct().count()
-    system_user_in_system_admins = SystemUser.objects.filter(
-        user__groups__name="System Admins"
-    ).distinct().count()
-    system_user_in_system_staff = SystemUser.objects.filter(
-        user__groups__name="System Staff"
-    ).distinct().count()
+        # SystemUser breakdown by permission group
+        system_user_in_admins = SystemUser.objects.filter(
+            user__groups__name="Admins"
+        ).distinct().count()
+        system_user_in_system_admins = SystemUser.objects.filter(
+            user__groups__name="System Admins"
+        ).distinct().count()
+        system_user_in_system_staff = SystemUser.objects.filter(
+            user__groups__name="System Staff"
+        ).distinct().count()
+    else:
+        # System users not shown for school-level users
+        total_system_users = 0
+        system_user_in_admins = 0
+        system_user_in_system_admins = 0
+        system_user_in_system_staff = 0
 
     # --- Student KPIs ---
-    total_students = Student.objects.count()
-    students_added_recent = Student.objects.filter(created_at__gte=start_period).count()
+    if is_system_level_dashboard:
+        # System-level users see all students
+        total_students = Student.objects.count()
+        students_added_recent = Student.objects.filter(created_at__gte=start_period).count()
+    else:
+        # School-level users see only students from their schools
+        # Using current or latest enrolment to determine school association
+        total_students = Student.objects.filter(
+            enrolments__school_id__in=user_school_ids,
+        ).distinct().count()
+        students_added_recent = 0  # Not shown for school-level users
 
     # --- Schools KPIs ---
-    active_schools = EmisSchool.objects.filter(active=True).count()
+    if is_system_level_dashboard:
+        # System-level users see all active schools
+        active_schools = EmisSchool.objects.filter(active=True).count()
 
-    # Schools with at least one enrolment carrying disability-related data
-    # (any of the 20 CFT fields has a recorded value)
-    disability_q = (
-        Q(cft1_wears_glasses__isnull=False)
-        | Q(cft2_difficulty_seeing_with_glasses__isnull=False)
-        | Q(cft3_difficulty_seeing__isnull=False)
-        | Q(cft4_has_hearing_aids__isnull=False)
-        | Q(cft5_difficulty_hearing_with_aids__isnull=False)
-        | Q(cft6_difficulty_hearing__isnull=False)
-        | Q(cft7_uses_walking_equipment__isnull=False)
-        | Q(cft8_difficulty_walking_without_equipment__isnull=False)
-        | Q(cft9_difficulty_walking_with_equipment__isnull=False)
-        | Q(cft10_difficulty_walking_compare_to_others__isnull=False)
-        | Q(cft11_difficulty_picking_up_small_objects__isnull=False)
-        | Q(cft12_difficulty_being_understood__isnull=False)
-        | Q(cft13_difficulty_learning__isnull=False)
-        | Q(cft14_difficulty_remembering__isnull=False)
-        | Q(cft15_difficulty_concentrating__isnull=False)
-        | Q(cft16_difficulty_accepting_change__isnull=False)
-        | Q(cft17_difficulty_controlling_behaviour__isnull=False)
-        | Q(cft18_difficulty_making_friends__isnull=False)
-        | Q(cft19_anxious_frequency__isnull=False)
-        | Q(cft20_depressed_frequency__isnull=False)
-    )
+        # Schools with at least one enrolment carrying disability-related data
+        # (any of the 20 CFT fields has a recorded value)
+        disability_q = (
+            Q(cft1_wears_glasses__isnull=False)
+            | Q(cft2_difficulty_seeing_with_glasses__isnull=False)
+            | Q(cft3_difficulty_seeing__isnull=False)
+            | Q(cft4_has_hearing_aids__isnull=False)
+            | Q(cft5_difficulty_hearing_with_aids__isnull=False)
+            | Q(cft6_difficulty_hearing__isnull=False)
+            | Q(cft7_uses_walking_equipment__isnull=False)
+            | Q(cft8_difficulty_walking_without_equipment__isnull=False)
+            | Q(cft9_difficulty_walking_with_equipment__isnull=False)
+            | Q(cft10_difficulty_walking_compare_to_others__isnull=False)
+            | Q(cft11_difficulty_picking_up_small_objects__isnull=False)
+            | Q(cft12_difficulty_being_understood__isnull=False)
+            | Q(cft13_difficulty_learning__isnull=False)
+            | Q(cft14_difficulty_remembering__isnull=False)
+            | Q(cft15_difficulty_concentrating__isnull=False)
+            | Q(cft16_difficulty_accepting_change__isnull=False)
+            | Q(cft17_difficulty_controlling_behaviour__isnull=False)
+            | Q(cft18_difficulty_making_friends__isnull=False)
+            | Q(cft19_anxious_frequency__isnull=False)
+            | Q(cft20_depressed_frequency__isnull=False)
+        )
 
-    schools_with_disability_data = (
-        StudentSchoolEnrolment.objects.filter(disability_q)
-        .values("school_id")
-        .distinct()
-        .count()
-    )
+        schools_with_disability_data = (
+            StudentSchoolEnrolment.objects.filter(disability_q)
+            .values("school_id")
+            .distinct()
+            .count()
+        )
+    else:
+        # School-level users see only their assigned schools
+        active_schools = user_schools.filter(active=True).count() if user_schools else 0
+
+        # Disability data schools (filtered to user's schools)
+        disability_q = (
+            Q(cft1_wears_glasses__isnull=False)
+            | Q(cft2_difficulty_seeing_with_glasses__isnull=False)
+            | Q(cft3_difficulty_seeing__isnull=False)
+            | Q(cft4_has_hearing_aids__isnull=False)
+            | Q(cft5_difficulty_hearing_with_aids__isnull=False)
+            | Q(cft6_difficulty_hearing__isnull=False)
+            | Q(cft7_uses_walking_equipment__isnull=False)
+            | Q(cft8_difficulty_walking_without_equipment__isnull=False)
+            | Q(cft9_difficulty_walking_with_equipment__isnull=False)
+            | Q(cft10_difficulty_walking_compare_to_others__isnull=False)
+            | Q(cft11_difficulty_picking_up_small_objects__isnull=False)
+            | Q(cft12_difficulty_being_understood__isnull=False)
+            | Q(cft13_difficulty_learning__isnull=False)
+            | Q(cft14_difficulty_remembering__isnull=False)
+            | Q(cft15_difficulty_concentrating__isnull=False)
+            | Q(cft16_difficulty_accepting_change__isnull=False)
+            | Q(cft17_difficulty_controlling_behaviour__isnull=False)
+            | Q(cft18_difficulty_making_friends__isnull=False)
+            | Q(cft19_anxious_frequency__isnull=False)
+            | Q(cft20_depressed_frequency__isnull=False)
+        )
+        schools_with_disability_data = (
+            StudentSchoolEnrolment.objects.filter(
+                disability_q,
+                school_id__in=user_school_ids,
+            )
+            .values("school_id")
+            .distinct()
+            .count()
+        )
 
     # --- Recent activity (simple unified event log across core models) ---
+    # NOTE: Recent activity is shown to ALL users, but filtered by school for school-level users.
+    # System-level users see all events, school-level users see only events from their schools.
     events = []
 
     def add_events_from_queryset(qs, entity_label, detail_url_name=None):
@@ -930,24 +1149,49 @@ def dashboard(request):
                     }
                 )
 
-    # Pull a few recent records from each core model
+    # Pull a few recent records from each core model (filtered by school for school-level users)
+    if is_system_level_dashboard:
+        # System-level users see all events
+        staff_qs = SchoolStaff.objects.order_by("-last_updated_at")[:5]
+        student_qs = Student.objects.order_by("-last_updated_at")[:5]
+        assignment_qs = SchoolStaffAssignment.objects.order_by("-last_updated_at")[:5]
+        enrolment_qs = StudentSchoolEnrolment.objects.order_by("-last_updated_at")[:5]
+    else:
+        # School-level users see only events from their schools
+        staff_qs = SchoolStaff.objects.filter(
+            assignments__school_id__in=user_school_ids,
+            assignments__end_date__isnull=True,
+        ).distinct().order_by("-last_updated_at")[:5]
+
+        student_qs = Student.objects.filter(
+            enrolments__school_id__in=user_school_ids,
+        ).distinct().order_by("-last_updated_at")[:5]
+
+        assignment_qs = SchoolStaffAssignment.objects.filter(
+            school_id__in=user_school_ids,
+        ).order_by("-last_updated_at")[:5]
+
+        enrolment_qs = StudentSchoolEnrolment.objects.filter(
+            school_id__in=user_school_ids,
+        ).order_by("-last_updated_at")[:5]
+
     add_events_from_queryset(
-        SchoolStaff.objects.order_by("-last_updated_at")[:5],
+        staff_qs,
         "Staff",
         detail_url_name="core:staff_detail",
     )
     add_events_from_queryset(
-        Student.objects.order_by("-last_updated_at")[:5],
+        student_qs,
         "Student",
         detail_url_name="core:student_detail",
     )
     add_events_from_queryset(
-        SchoolStaffAssignment.objects.order_by("-last_updated_at")[:5],
+        assignment_qs,
         "Staff assignment",
         detail_url_name=None,  # no detail view yet
     )
     add_events_from_queryset(
-        StudentSchoolEnrolment.objects.order_by("-last_updated_at")[:5],
+        enrolment_qs,
         "Student enrolment",
         detail_url_name=None,  # could later deep-link to student detail + anchor
     )
@@ -955,8 +1199,145 @@ def dashboard(request):
     # Sort all events by time and keep the latest 10
     events = sorted(events, key=lambda e: e["when"], reverse=True)[:10]
 
+    # --- Student Files (recent student activity for dedicated table) ---
+    # NOTE: Separate student events list for the "Student Files" table shown to all user groups.
+    # This provides a focused view of recent student additions/updates, including both profile
+    # updates AND enrolment/disability survey updates.
+    student_events = []
+
+    # Get recent Student profile updates
+    if is_system_level_dashboard:
+        recent_students_qs = Student.objects.select_related(
+            "last_updated_by", "created_by"
+        ).order_by("-last_updated_at")[:20]
+    else:
+        recent_students_qs = Student.objects.filter(
+            enrolments__school_id__in=user_school_ids,
+        ).select_related(
+            "last_updated_by", "created_by"
+        ).distinct().order_by("-last_updated_at")[:20]
+
+    # Get recent StudentSchoolEnrolment updates (includes disability survey updates)
+    if is_system_level_dashboard:
+        recent_enrolments_qs = StudentSchoolEnrolment.objects.select_related(
+            "student", "last_updated_by", "created_by"
+        ).order_by("-last_updated_at")[:20]
+    else:
+        recent_enrolments_qs = StudentSchoolEnrolment.objects.filter(
+            school_id__in=user_school_ids,
+        ).select_related(
+            "student", "last_updated_by", "created_by"
+        ).order_by("-last_updated_at")[:20]
+
+    # Build student events from profile updates
+    for student in recent_students_qs:
+        when = getattr(student, "last_updated_at", None) or getattr(student, "created_at", None)
+        created_at = getattr(student, "created_at", None)
+        last_updated_at = getattr(student, "last_updated_at", None)
+
+        if created_at and last_updated_at and last_updated_at > created_at:
+            action = "Updated Profile"
+        elif created_at:
+            action = "Created"
+        else:
+            action = "Activity"
+
+        by_user = getattr(student, "last_updated_by", None) or getattr(student, "created_by", None)
+        by_display = None
+        if by_user:
+            full_name = by_user.get_full_name()
+            if full_name:
+                by_display = full_name
+            elif by_user.email:
+                by_display = by_user.email
+            else:
+                by_display = by_user.username
+
+        url = None
+        if when:
+            try:
+                url = reverse("core:student_detail", args=[student.pk])
+            except Exception:
+                url = None
+
+        if when:
+            student_name = f"{student.first_name} {student.last_name}".strip()
+            if not student_name:
+                student_name = f"Student #{student.pk}"
+
+            student_events.append({
+                "when": when,
+                "entity": student_name,
+                "action": action,
+                "by": by_display,
+                "url": url,
+            })
+
+    # Build student events from enrolment/disability survey updates
+    for enrolment in recent_enrolments_qs:
+        student = enrolment.student
+        when = getattr(enrolment, "last_updated_at", None) or getattr(enrolment, "created_at", None)
+        created_at = getattr(enrolment, "created_at", None)
+        last_updated_at = getattr(enrolment, "last_updated_at", None)
+
+        if created_at and last_updated_at and last_updated_at > created_at:
+            action = "Updated Enrolment/Survey"
+        elif created_at:
+            action = "Created Enrolment"
+        else:
+            action = "Activity"
+
+        by_user = getattr(enrolment, "last_updated_by", None) or getattr(enrolment, "created_by", None)
+        by_display = None
+        if by_user:
+            full_name = by_user.get_full_name()
+            if full_name:
+                by_display = full_name
+            elif by_user.email:
+                by_display = by_user.email
+            else:
+                by_display = by_user.username
+
+        url = None
+        if when:
+            try:
+                url = reverse("core:student_detail", args=[student.pk])
+            except Exception:
+                url = None
+
+        if when:
+            student_name = f"{student.first_name} {student.last_name}".strip()
+            if not student_name:
+                student_name = f"Student #{student.pk}"
+
+            student_events.append({
+                "when": when,
+                "entity": student_name,
+                "action": action,
+                "by": by_display,
+                "url": url,
+            })
+
+    # Sort all student events by time and keep the latest 10
+    student_events = sorted(student_events, key=lambda e: e["when"], reverse=True)[:10]
+
+    # Get user's school codes and names for school-level users (to display in Active Schools card)
+    user_school_info = []
+    if not is_system_level_dashboard and user_schools:
+        user_school_info = list(
+            user_schools.filter(active=True).values("emis_school_no", "emis_school_name").order_by("emis_school_name")
+        )
+
     context = {
         "active": "dashboard",
+        # Dashboard type flag (used in template to show/hide sections)
+        "is_system_level_dashboard": is_system_level_dashboard,
+        # User role checks
+        "is_teacher": is_teacher(request.user),
+        # User's assigned school info (for school-level users only)
+        "user_school_info": user_school_info,
+        # EMIS context name
+        "emis_context": settings.EMIS.get("CONTEXT", "EMIS"),
         # User KPIs
         "total_users": total_users,
         "pending_users_count": pending_users_count,
@@ -979,9 +1360,17 @@ def dashboard(request):
         # Schools KPIs
         "active_schools": active_schools,
         "schools_with_disability_data": schools_with_disability_data,
+        # Enrollment data (school-level users only)
+        "total_enrolment": total_enrolment,
+        "enrolment_by_school": enrolment_by_school,
+        "enrolment_survey_year": enrolment_survey_year,
         # Activity
         "recent_events": events,
+        "student_events": student_events,
     }
+
+    logger.info(f"Dashboard context for user {request.user}: is_system_level={is_system_level_dashboard}, total_enrolment={total_enrolment}, survey_year={enrolment_survey_year}, enrolment_by_school={enrolment_by_school}")
+
     return render(request, "dashboard.html", context)
 
 

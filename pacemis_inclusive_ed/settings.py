@@ -230,6 +230,19 @@ EMIS = {
 }
 EMIS["LOGIN_URL"] = f'{EMIS["BASE_URL"]}/api/token'
 EMIS["LOOKUPS_URL"] = f'{EMIS["BASE_URL"]}/api/lookups/collection/core'
+EMIS["ODATA_URL"] = f'{EMIS["BASE_URL"]}/api/odata/warehouse'
+
+###############################################################################
+# Cache settings
+###############################################################################
+
+# File-based cache for low-volume data (development and production)
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.filebased.FileBasedCache",
+        "LOCATION": BASE_DIR / "data" / "cache",
+    }
+}
 
 ###############################################################################
 # Application settings
