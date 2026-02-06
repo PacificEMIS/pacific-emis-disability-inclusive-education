@@ -156,6 +156,17 @@
         <div class="{% if request.user.is_authenticated %}flex-grow-1{% else %}container py-5{% endif %}">
           {% if not request.user.is_authenticated %}<div class="row">{% endif %}
             <main class="{% if request.user.is_authenticated %}px-3 px-md-4 py-4{% else %}py-4{% endif %}">
+              <!-- Django Messages -->
+              {% if messages %}
+                <div class="messages-container mb-3">
+                  {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                      {{ message }}
+                      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                  {% endfor %}
+                </div>
+              {% endif %}
               {% block content %}
               {% endblock content %}
 
