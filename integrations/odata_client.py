@@ -245,7 +245,7 @@ def load_enrollment_cache():
     """
     Load pre-aggregated enrollment data from filesystem cache.
 
-    This data is synced via the 'sync_enrollment_data' management command.
+    This data is synced via the 'emis_sync_warehouse_data' management command.
     Returns aggregated enrollment records or None if cache doesn't exist.
 
     Returns:
