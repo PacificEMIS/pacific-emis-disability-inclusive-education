@@ -31,126 +31,148 @@
     {% endblock extra_head %}
   </head>
   <body>
-    <!-- Header -->
-    <header class="navbar navbar-dark sticky-top bg-primary flex-md-nowrap p-0 shadow">
-      <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3"
-         href="{% url 'core:dashboard' %}">{{ emis_context }} — Disability Inclusive Education</a>
+    {# Outer wrapper: flex row for sidebar layout, plain div otherwise #}
+    <div class="{% if request.user.is_authenticated %}d-flex{% endif %}">
+
       {% if request.user.is_authenticated %}
-        <!-- Mobile sidebar toggle -->
-        <button class="navbar-toggler d-md-none collapsed me-2"
-                type="button"
-                data-bs-toggle="offcanvas"
-                data-bs-target="#sidebarNav"
-                aria-controls="sidebarNav"
-                aria-label="Toggle navigation">
-          <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="w-100"></div>
-        <div class="navbar-nav flex-row align-items-center">
-          <!-- Logged-in user badge -->
-          <div class="nav-item text-nowrap me-2">
-            {% if request.user.is_authenticated %}
-              {% if user_profile_url %}
-                <a href="{{ user_profile_url }}"
-                   class="navbar-text text-light small d-flex align-items-center text-decoration-none"
-                   title="View your profile">
-                  <i class="bi bi-person-circle me-1"></i>
-                  {{ request.user.get_full_name|default:request.user.username }}
-                  {% if request.user.email %}({{ request.user.email }}){% endif %}
-                </a>
-              {% else %}
-                <span class="navbar-text text-light small d-flex align-items-center">
-                  <i class="bi bi-person-circle me-1"></i>
-                  {{ request.user.get_full_name|default:request.user.username }}
-                  {% if request.user.email %}({{ request.user.email }}){% endif %}
-                </span>
-              {% endif %}
-            {% endif %}
+        <!-- Sidebar -->
+        <div class="offcanvas-md offcanvas-start sidebar-column p-0 bg-primary text-light"
+             tabindex="-1"
+             id="sidebarNav">
+          <div class="offcanvas-header d-md-none justify-content-end">
+            <button type="button"
+                    class="btn-close btn-close-white"
+                    data-bs-dismiss="offcanvas"
+                    data-bs-target="#sidebarNav"
+                    aria-label="Close"></button>
           </div>
-          <!-- Sign out -->
-          <div class="nav-item text-nowrap">
-            <a class="nav-link px-3" href="{% url 'accounts:logout' %}">
-              <i class="bi bi-box-arrow-right me-1"></i> Sign Out
-            </a>
+          <div class="offcanvas-body d-flex flex-column p-0 sidebar">
+            <!-- Branding: logo + app title -->
+            <div class="text-center px-3 pt-4 pb-3">
+              <img src="{% static 'app/logos/' %}{{ emis_logo }}.png"
+                   alt="{{ emis_context }} Logo"
+                   class="sidebar-logo mb-2">
+              <div class="sidebar-app-title fw-bold">{{ emis_context }}</div>
+              <div class="sidebar-app-subtitle text-light small">{{ app_name }}</div>
+            </div>
+            <hr class="text-secondary mx-3 mt-0">
+            <!-- Navigation -->
+            <nav class="h-100 d-flex flex-column">
+              <ul class="nav nav-pills flex-column mb-auto">
+                <li class="nav-item">
+                  <a class="nav-link d-flex align-items-center text-light {% if active == 'dashboard' %}active{% endif %}"
+                     href="{% url 'core:dashboard' %}">
+                    <i class="bi bi-speedometer2 me-2"></i> Dashboard
+                  </a>
+                </li>
+                <li>
+                  <a class="nav-link d-flex align-items-center text-light {% if active == 'staff' %}active{% endif %}"
+                     href="{% url 'core:staff_list' %}">
+                    <i class="bi bi-people me-2"></i> School Staff
+                  </a>
+                </li>
+                {% if is_system_level_user %}
+                  <li>
+                    <a class="nav-link d-flex align-items-center text-light {% if active == 'system_users' %}active{% endif %}"
+                       href="{% url 'core:system_user_list' %}">
+                      <i class="bi bi-building me-2"></i> {{ terminology.system_users_plural }}
+                    </a>
+                  </li>
+                {% endif %}
+                <li>
+                  <a class="nav-link d-flex align-items-center text-light {% if active == 'students' %}active{% endif %}"
+                     href="{% url 'core:student_list' %}">
+                    <i class="bi bi-mortarboard me-2"></i> Students
+                  </a>
+                </li>
+                {% if can_manage_pending_users %}
+                  <li class="nav-item mt-3">
+                    <span class="sidebar-section-label px-3 small text-uppercase text-light">Admin</span>
+                  </li>
+                  <li>
+                    <a class="nav-link d-flex align-items-center text-light {% if active == 'pending_users' %}active{% endif %}"
+                       href="{% url 'core:pending_users_list' %}">
+                      <i class="bi bi-person-plus me-2"></i> Pending Users
+                    </a>
+                  </li>
+                {% endif %}
+              </ul>
+            </nav>
           </div>
         </div>
       {% endif %}
-    </header>
-    <div class="{% if request.user.is_authenticated %}container-fluid{% else %}container py-5{% endif %}">
-      <div class="row">
+
+      <!-- Right column (or full page when no sidebar) -->
+      <div class="{% if request.user.is_authenticated %}content-column d-flex flex-column min-vh-100{% endif %}">
+
+        <!-- Header -->
         {% if request.user.is_authenticated %}
-          <!-- Sidebar -->
-          <div class="offcanvas-md offcanvas-start col-md-3 col-lg-2 p-0 bg-dark text-light"
-               tabindex="-1"
-               id="sidebarNav">
-            <div class="offcanvas-header d-md-none">
-              <h5 class="offcanvas-title">Menu</h5>
-              <button type="button"
-                      class="btn-close"
-                      data-bs-dismiss="offcanvas"
-                      data-bs-target="#sidebarNav"
-                      aria-label="Close"></button>
-            </div>
-            <div class="offcanvas-body d-flex flex-column p-0 sidebar">
-              <nav class="h-100 d-flex flex-column">
-                <ul class="nav nav-pills flex-column mb-auto pt-3">
-                  <li class="nav-item">
-                    <a class="nav-link d-flex align-items-center text-light {% if active == 'dashboard' %}active bg-secondary{% endif %}"
-                       href="{% url 'core:dashboard' %}">
-                      <i class="bi bi-speedometer2 me-2"></i> Dashboard
-                    </a>
-                  </li>
-                  <li>
-                    <a class="nav-link d-flex align-items-center text-light {% if active == 'staff' %}active bg-secondary{% endif %}"
-                       href="{% url 'core:staff_list' %}">
-                      <i class="bi bi-people me-2"></i> School Staff
-                    </a>
-                  </li>
-                  {% if is_system_level_user %}
-                    <li>
-                      <a class="nav-link d-flex align-items-center text-light {% if active == 'system_users' %}active bg-secondary{% endif %}"
-                         href="{% url 'core:system_user_list' %}">
-                        <i class="bi bi-building me-2"></i> {{ terminology.system_users_plural }}
-                      </a>
-                    </li>
-                  {% endif %}
-                  <li>
-                    <a class="nav-link d-flex align-items-center text-light {% if active == 'students' %}active bg-secondary{% endif %}"
-                       href="{% url 'core:student_list' %}">
-                      <i class="bi bi-mortarboard me-2"></i> Students
-                    </a>
-                  </li>
-                  {% if can_manage_pending_users %}
-                    <li class="nav-item mt-3">
-                      <span class="nav-link text-secondary small text-uppercase">Admin</span>
-                    </li>
-                    <li>
-                      <a class="nav-link d-flex align-items-center text-light {% if active == 'pending_users' %}active bg-secondary{% endif %}"
-                         href="{% url 'core:pending_users_list' %}">
-                        <i class="bi bi-person-plus me-2"></i> Pending Users
-                      </a>
-                    </li>
-                  {% endif %}
-                </ul>
-              </nav>
-            </div>
-          </div>
-        {% endif %}
-        <!-- Main -->
-        <main class="{% if request.user.is_authenticated %}col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4{% else %}py-4{% endif %}">
-          {% block content %}
-          {% endblock content %}
-          {% if request.user.is_authenticated %}
-            <footer class="pt-5 small text-body-secondary">
-              <hr>
-              <div>
-                © {% now "Y" %} {{ emis_context }} — Disability Inclusive Education |
-                Last updated: {% now "Y-m-d H:i" as current_time %}
-                {% localtime on %}{{ current_time }}{% endlocaltime %}
+          <header class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow content-header">
+            <!-- Mobile sidebar toggle -->
+            <button class="navbar-toggler d-md-none collapsed ms-2"
+                    type="button"
+                    data-bs-toggle="offcanvas"
+                    data-bs-target="#sidebarNav"
+                    aria-controls="sidebarNav"
+                    aria-label="Toggle navigation">
+              <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="flex-grow-1"></div>
+            <div class="navbar-nav flex-row align-items-center">
+              <!-- Logged-in user badge -->
+              <div class="nav-item text-nowrap me-2">
+                {% if user_profile_url %}
+                  <a href="{{ user_profile_url }}"
+                     class="navbar-text text-light small d-flex align-items-center text-decoration-none"
+                     title="View your profile">
+                    <i class="bi bi-person-circle me-1 d-none d-md-inline"></i>
+                    {{ request.user.get_full_name|default:request.user.username }}
+                    <span class="d-none d-md-inline">{% if request.user.email %} ({{ request.user.email }}){% endif %}</span>
+                  </a>
+                {% else %}
+                  <span class="navbar-text text-light small d-flex align-items-center">
+                    <i class="bi bi-person-circle me-1 d-none d-md-inline"></i>
+                    {{ request.user.get_full_name|default:request.user.username }}
+                    <span class="d-none d-md-inline">{% if request.user.email %} ({{ request.user.email }}){% endif %}</span>
+                  </span>
+                {% endif %}
               </div>
-            </footer>
-          {% endif %}
-        </main>
+              <!-- Sign out -->
+              <div class="nav-item text-nowrap">
+                <a class="nav-link px-3" href="{% url 'accounts:logout' %}">
+                  <i class="bi bi-box-arrow-right me-1"></i> Sign Out
+                </a>
+              </div>
+            </div>
+          </header>
+        {% else %}
+          <header class="navbar navbar-dark sticky-top bg-primary flex-md-nowrap p-0 shadow">
+            <a class="navbar-brand me-0 px-3"
+               href="{% url 'core:dashboard' %}">{{ emis_context }} &mdash; {{ app_name }}</a>
+          </header>
+        {% endif %}
+
+        <!-- Main -->
+        <div class="{% if request.user.is_authenticated %}flex-grow-1{% else %}container py-5{% endif %}">
+          {% if not request.user.is_authenticated %}<div class="row">{% endif %}
+            <main class="{% if request.user.is_authenticated %}px-3 px-md-4 py-4{% else %}py-4{% endif %}">
+              {% block content %}
+              {% endblock content %}
+
+              {% if request.user.is_authenticated %}
+                <footer class="pt-5 small text-body-secondary">
+                  <hr>
+                  <div>
+                    &copy; {% now "Y" %} {{ emis_context }} &mdash; {{ app_name }} |
+                    Last updated: {% now "Y-m-d H:i" as current_time %}
+                    {% localtime on %}{{ current_time }}{% endlocaltime %}
+                  </div>
+                </footer>
+              {% endif %}
+            </main>
+          {% if not request.user.is_authenticated %}</div>{% endif %}
+        </div>
+
       </div>
     </div>
     <!-- Bootstrap JS -->
