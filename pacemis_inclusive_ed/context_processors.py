@@ -4,9 +4,16 @@ from django.conf import settings
 def emis_context(request):
     """
     Makes settings.EMIS['CONTEXT'] available as {{ emis_context }} in all templates.
+    Also provides {{ emis_logo }} — the lowercase first word of CONTEXT for logo filenames
+    (e.g. "KEMIS (Dev)" → "kemis").
     """
     emis_cfg = getattr(settings, "EMIS", None)
-    return {"emis_context": emis_cfg.get("CONTEXT") if emis_cfg else None}
+    context_str = emis_cfg.get("CONTEXT", "") if emis_cfg else ""
+    logo_name = context_str.split()[0].lower() if context_str else "logo"
+    return {
+        "emis_context": context_str or None,
+        "emis_logo": logo_name,
+    }
 
 
 def app_name(request):

@@ -1,4 +1,54 @@
-/* Keep sidebar tidy and sign-out pinned at bottom */
+/* ==========================================================
+   Sidebar-first layout
+   ========================================================== */
+
+/* Sidebar column: fixed width, full height on md+ */
+@media (min-width: 768px) {
+  .sidebar-column {
+    width: 220px;
+    min-width: 220px;
+    max-width: 220px;
+    position: sticky !important;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    transform: none !important;
+    visibility: visible !important;
+    border-right: 1px solid var(--bs-border-color);
+    z-index: 1040;
+  }
+}
+
+/* Content column: takes remaining width */
+.content-column {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Content header: sticky within content column */
+.content-header {
+  z-index: 1030;
+}
+
+/* Sidebar branding */
+.sidebar-logo {
+  width: 150px;
+  height: auto;
+  object-fit: contain;
+}
+
+.sidebar-app-title {
+  font-size: 1.25rem;
+  letter-spacing: 0.05em;
+  color: #fff;
+}
+
+.sidebar-app-subtitle {
+  font-size: 0.8rem;
+  color: #ccc;
+}
+
+/* Keep sidebar tidy */
 .sidebar .nav-link {
   border-radius: .5rem;
   margin: .125rem .5rem;
@@ -6,32 +56,19 @@
 }
 .sidebar .nav-link.active {
   color: #fff;
-  background-color: var(--bs-primary);
+  background-color: #1a5ea8;
 }
 .sidebar .nav-link:hover {
   color: var(--bs-body-color);
   background-color: rgba(0,0,0,.08);
 }
-
-/* Make offcanvas look like static sidebar on md+ */
-@media (min-width: 768px) {
-  .offcanvas-md {
-    position: sticky !important;
-    top: 0; /* was 56px */
-    height: 100vh; /* or just auto if you prefer */
-    transform: none !important;
-    visibility: visible !important;
-    border-right: 1px solid var(--bs-border-color);
-  }
+.sidebar-section-label {
+  display: block;
+  padding-top: .5rem;
+  padding-bottom: .25rem;
+  opacity: 0.85;
+  cursor: default;
 }
-
-/* sidebar content to scroll nicely within its own area */
-/* @media (min-width: 768px) {
-  .offcanvas-md .offcanvas-body {
-    max-height: 100vh;
-    overflow-y: auto;
-  }
-} */
 
 /* Fix border rendering in card corners */
 .card {
