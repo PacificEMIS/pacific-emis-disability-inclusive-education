@@ -14,7 +14,6 @@
     overflow-y: auto;
     transform: none !important;
     visibility: visible !important;
-    border-right: 1px solid var(--bs-border-color);
     z-index: 1040;
   }
 }
@@ -48,6 +47,27 @@
   color: #ccc;
 }
 
+/* Login page branding (larger than sidebar) */
+.login-logo {
+  width: 150px;
+  height: auto;
+  object-fit: contain;
+}
+
+.login-app-title {
+  font-size: 1.75rem;
+  letter-spacing: 0.05em;
+}
+
+.login-app-subtitle {
+  font-size: 1.25rem;
+}
+
+/* Login page: reduce top whitespace for unauthenticated pages */
+.login-page-compact {
+  padding-top: 1rem !important;
+}
+
 /* Keep sidebar tidy */
 .sidebar .nav-link {
   border-radius: .5rem;
@@ -78,4 +98,17 @@
 /* Edge-to-edge tables in cards - remove card-body padding for table containers */
 .card-body.p-0 {
   padding: 0;
+}
+
+/* Utility classes */
+.w-40 {
+  width: 40%;
+}
+
+.min-vh-60 {
+  min-height: 60vh;
+}
+
+.fs-forbidden-icon {
+  font-size: 6rem;
 }
