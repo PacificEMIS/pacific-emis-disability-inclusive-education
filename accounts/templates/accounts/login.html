@@ -1,20 +1,27 @@
 {% extends "base.html" %}
-{% load socialaccount %}
+{% load static socialaccount %}
 {% block content %}
-  <div class="container d-flex justify-content-center">
+  <div class="container d-flex justify-content-center login-page-compact">
     <div class="w-100">
-      <div class="py-4 px-3 text-center">
-        <h1>Sign in</h1>
-        <p>Use your organization Google account to access the {{ emis_context }} — Disability Inclusive Education.</p>
+      <div class="pt-0 pb-3 px-3 text-center">
+        {# Branding: logo + context + app name (mirrors sidebar) #}
+        <img src="{% static 'app/logos/' %}{{ emis_logo }}.png"
+             alt="{{ emis_context }} Logo"
+             class="login-logo mb-1">
+        <div class="login-app-title fw-bold">{{ emis_context }}</div>
+        <div class="login-app-subtitle text-muted">{{ app_name }}</div>
+
+        <h1 class="h4 mt-4">Sign In</h1>
+        <p class="text-muted">Use your organization Google account to access {{ app_name }}.</p>
 
         <p class="mt-4">
-          <a href="{% provider_login_url 'google' %}" class="btn btn-primary px-4 py-2">
-            Continue with Google
+          <a href="{% provider_login_url 'google' %}" class="btn btn-primary btn-lg px-4 py-2">
+            <i class="bi bi-google me-2"></i> Sign in with Google
           </a>
         </p>
 
         <p class="mt-3 text-muted small">
-          Don’t have access yet? Sign in first, then an administrator can grant permissions.
+          Don't have access yet? Sign in first, then an administrator can grant permissions.
         </p>
       </div>
     </div>
