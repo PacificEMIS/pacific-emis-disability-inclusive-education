@@ -336,6 +336,24 @@ def any_app_user(request):
     return request.getfixturevalue(request.param)
 
 
+@pytest.fixture
+def sync_email_threads(monkeypatch):
+    """
+    Run the fire-and-forget email threads in core.emails inline so tests
+    can assert on django.core.mail.outbox right after the call.
+    """
+    import core.emails
+
+    class InlineThread:
+        def __init__(self, target=None, daemon=None, **kwargs):
+            self._target = target
+
+        def start(self):
+            self._target()
+
+    monkeypatch.setattr(core.emails, "Thread", InlineThread)
+
+
 # ============================================================================
 # Client helpers
 # ============================================================================
