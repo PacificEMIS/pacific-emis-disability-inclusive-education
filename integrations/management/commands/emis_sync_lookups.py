@@ -1,5 +1,7 @@
+from django.core.cache import cache
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from django.utils import timezone
 from integrations.models import (
     EmisSchool,
     EmisClassLevel,
@@ -7,6 +9,9 @@ from integrations.models import (
     EmisWarehouseYear,
 )
 from integrations.emis_client import EmisClient
+
+
+LAST_SYNC_CACHE_KEY = "emis_lookups_last_sync"
 
 
 class Command(BaseCommand):
@@ -94,6 +99,12 @@ class Command(BaseCommand):
             updated_title,
             added_year,
             updated_year,
+        )
+
+        cache.set(
+            LAST_SYNC_CACHE_KEY,
+            {"at": timezone.now(), "message": msg},
+            None,
         )
 
         self.stdout.write(self.style.SUCCESS(msg))
