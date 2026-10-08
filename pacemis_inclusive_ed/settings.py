@@ -385,6 +385,14 @@ LOGGING = {
             "level": "WARNING",
             "propagate": False,
         },
+        # Bots probing /admin/ with huge paths trip Django's 2048-char redirect
+        # limit (admin redirects anonymous users to login with ?next=<path>).
+        # Django already answers 400; log it but do not email admins.
+        "django.security.DisallowedRedirect": {
+            "handlers": ["console_dev", "console_prod"],
+            "level": "WARNING",
+            "propagate": False,
+        },
         # allauth (handy during OAuth debugging)
         "allauth": {
             "handlers": ["console_dev", "console_prod"],
