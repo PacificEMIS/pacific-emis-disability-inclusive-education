@@ -533,3 +533,14 @@ class SystemUserEditForm(forms.Form):
             self.fields["groups"].help_text = (
                 "Select at least one group. Note: Only full Admins can assign the Admins group."
             )
+
+
+class TestEmailForm(forms.Form):
+    """Recipient address for the Utilities > Test Email check."""
+
+    recipient = forms.EmailField(
+        label="Send test email to",
+        max_length=254,
+        widget=forms.EmailInput(attrs={"class": "form-control", "autocomplete": "email"}),
+        help_text="Defaults to your own address. Change it to test delivery to another mailbox.",
+    )

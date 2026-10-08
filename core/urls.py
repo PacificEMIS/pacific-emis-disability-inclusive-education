@@ -89,4 +89,7 @@ urlpatterns = [
         views.settings_lookup_update,
         name="settings_lookup_update",
     ),
+
+    # Utilities
+    path("utilities/test-email/", views.test_email, name="test_email"),
 ]

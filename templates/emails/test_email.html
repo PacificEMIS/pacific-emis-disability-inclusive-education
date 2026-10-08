@@ -1,0 +1,59 @@
+{# djlint:off H021 #}
+{% extends "emails/base_email.html" %}
+{% block subject %}
+  {{ emis_context }} {{ app_name }}: Test email
+{% endblock subject %}
+{% block header_title %}
+  {{ emis_context }} — {{ app_name }}
+{% endblock header_title %}
+{% block body_intro %}
+  <p>Hello,</p>
+  <p>
+    This is a test email sent from the {{ emis_context }} {{ app_name }} app.
+    If you are reading this, the server is able to send email.
+  </p>
+{% endblock body_intro %}
+{% block body_main %}
+  <table role="presentation"
+         cellspacing="0"
+         cellpadding="0"
+         border="0"
+         style="width:100%;
+                margin:16px 0;
+                border:1px solid #dee2e6;
+                border-radius:6px;
+                overflow:hidden">
+    <tr>
+      <td style="padding:12px 16px; background-color:#f8f9fa; border-bottom:1px solid #dee2e6;">
+        <strong style="font-size:14px;">Test Details</strong>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:16px;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="width:100%;">
+          <tr>
+            <td style="padding:4px 0; color:#6c757d; width:120px;">Requested by:</td>
+            <td style="padding:4px 0;">{{ sent_by.get_full_name|default:sent_by.username }} ({{ sent_by.email }})</td>
+          </tr>
+          <tr>
+            <td style="padding:4px 0; color:#6c757d;">Sent at:</td>
+            <td style="padding:4px 0;">{{ sent_at|date:"Y-m-d H:i" }} UTC</td>
+          </tr>
+          <tr>
+            <td style="padding:4px 0; color:#6c757d;">Mail server:</td>
+            <td style="padding:4px 0;">{{ email_host }}:{{ email_port }}</td>
+          </tr>
+          <tr>
+            <td style="padding:4px 0; color:#6c757d;">From address:</td>
+            <td style="padding:4px 0;">{{ from_email }}</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+  <p style="margin:16px 0; color:#495057;">
+    No action is required. This message was sent by an administrator to
+    check that email delivery is working.
+  </p>
+{% endblock body_main %}
+{# djlint:on #}
