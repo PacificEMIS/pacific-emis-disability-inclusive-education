@@ -36,7 +36,7 @@ from django.contrib.auth.models import Group
 from django.db.models import Q, QuerySet
 
 from integrations.models import EmisSchool
-from core.models import SchoolStaff, SchoolStaffAssignment, Student, StudentSchoolEnrolment, SystemUser
+from core.models import SchoolStaff, SchoolStaffAssignment, Student, StudentSchoolEnrolment, SystemUser, active_assignment_q
 
 # ============================================================================
 # Group names (single source of truth)
@@ -166,7 +166,7 @@ def get_user_schools(user):
     Return the EmisSchool queryset for which the user has an *active*
     SchoolStaffAssignment.
 
-    Active == assignment.end_date is NULL (no end date).
+    Active == the assignment covers today (see active_assignment_q).
     Teachers and SchoolStaff both use this; Admins/superusers don't need it
     for permissions, but we might still use it for defaults later.
     """
@@ -183,8 +183,8 @@ def get_user_schools(user):
     #   school -> EmisSchool (related_name="staff_assignments")
     #   end_date (nullable)
     return EmisSchool.objects.filter(
+        active_assignment_q("staff_assignments__"),
         staff_assignments__school_staff__user=user,
-        staff_assignments__end_date__isnull=True,
     ).distinct()
 
 

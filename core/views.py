@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 from rapidfuzz import fuzz
 
-from core.models import SchoolStaff, SchoolStaffAssignment, Student, StudentSchoolEnrolment, SystemUser
+from core.models import SchoolStaff, SchoolStaffAssignment, Student, StudentSchoolEnrolment, SystemUser, active_assignment_q
 from core.forms import (
     SchoolStaffAssignmentForm,
     SchoolStaffEditForm,
@@ -942,8 +942,8 @@ def dashboard(request):
         # School-level users see only users from their schools
         # Users are counted if they have SchoolStaff profile with assignments to the user's schools
         total_users = User.objects.filter(
+            active_assignment_q("school_staff__assignments__"),
             school_staff__assignments__school_id__in=user_school_ids,
-            school_staff__assignments__end_date__isnull=True,
             is_superuser=False,
         ).distinct().count()
         # Pending users not relevant for school-level users
@@ -972,31 +972,31 @@ def dashboard(request):
     else:
         # School-level users see only staff from their schools
         total_staff = SchoolStaff.objects.filter(
+            active_assignment_q("assignments__"),
             assignments__school_id__in=user_school_ids,
-            assignments__end_date__isnull=True,
         ).distinct().count()
         staff_added_recent = 0  # Not shown for school-level users
         staff_unassigned = 0  # Not relevant for school-level users
 
         # SchoolStaff breakdown by permission group (school-scoped)
         school_staff_in_admins = SchoolStaff.objects.filter(
+            active_assignment_q("assignments__"),
             assignments__school_id__in=user_school_ids,
-            assignments__end_date__isnull=True,
             user__groups__name="Admins"
         ).distinct().count()
         school_staff_in_school_admins = SchoolStaff.objects.filter(
+            active_assignment_q("assignments__"),
             assignments__school_id__in=user_school_ids,
-            assignments__end_date__isnull=True,
             user__groups__name="School Admins"
         ).distinct().count()
         school_staff_in_school_staff = SchoolStaff.objects.filter(
+            active_assignment_q("assignments__"),
             assignments__school_id__in=user_school_ids,
-            assignments__end_date__isnull=True,
             user__groups__name="School Staff"
         ).distinct().count()
         school_staff_in_teachers = SchoolStaff.objects.filter(
+            active_assignment_q("assignments__"),
             assignments__school_id__in=user_school_ids,
-            assignments__end_date__isnull=True,
             user__groups__name="Teachers"
         ).distinct().count()
 
@@ -1169,8 +1169,8 @@ def dashboard(request):
     else:
         # School-level users see only events from their schools
         staff_qs = SchoolStaff.objects.filter(
+            active_assignment_q("assignments__"),
             assignments__school_id__in=user_school_ids,
-            assignments__end_date__isnull=True,
         ).distinct().order_by("-last_updated_at")[:5]
 
         student_qs = Student.objects.filter(
