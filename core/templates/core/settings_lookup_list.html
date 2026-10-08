@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% load dict_extras %}
+{% block title %}{{ config.label }} - Settings{% endblock title %}
+{% block content %}
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'core:settings' %}">Settings</a></li>
+      <li class="breadcrumb-item active" aria-current="page">{{ config.label }}</li>
+    </ol>
+  </nav>
+
+  <div class="card shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h1 class="h5 mb-0">
+        <i class="{{ config.icon }} me-2"></i>
+        {{ config.label }}
+      </h1>
+      <span class="badge text-bg-secondary">{{ items|length }} item{{ items|length|pluralize }}</span>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              {% for field_name, field_label in config.fields %}
+                <th>{{ field_label }}</th>
+              {% endfor %}
+              <th class="text-center">Active</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in items %}
+              <tr data-pk="{{ item.pk }}">
+                {% for field_name, field_label in config.fields %}
+                  <td>{{ item|getfield:field_name }}</td>
+                {% endfor %}
+                <td class="text-center">
+                  <div class="form-check form-switch d-flex justify-content-center">
+                    <input class="form-check-input js-active-toggle"
+                           type="checkbox"
+                           role="switch"
+                           data-pk="{{ item.pk }}"
+                           aria-label="Active"
+                           {% if item.active %}checked{% endif %}>
+                  </div>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="99" class="text-center text-body-secondary py-4">
+                  No items found. Run a sync from the Settings page to populate this lookup.
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+(function () {
+  var csrfToken = '{{ csrf_token }}';
+  var baseUrl = '{% url "core:settings_lookup_list" slug %}';
+
+  document.querySelectorAll('.js-active-toggle').forEach(function (el) {
+    el.addEventListener('change', function () {
+      var input = this;
+      var row = input.closest('tr');
+      var formData = new FormData();
+      formData.append('active', input.checked);
+
+      fetch(baseUrl + encodeURIComponent(input.dataset.pk) + '/update/', {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': csrfToken,
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: formData,
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (data.ok) {
+            row.classList.add('table-success');
+            setTimeout(function () { row.classList.remove('table-success'); }, 600);
+          } else {
+            input.checked = !input.checked;
+            row.classList.add('table-danger');
+            setTimeout(function () { row.classList.remove('table-danger'); }, 1200);
+          }
+        })
+        .catch(function () {
+          input.checked = !input.checked;
+          row.classList.add('table-danger');
+          setTimeout(function () { row.classList.remove('table-danger'); }, 1200);
+        });
+    });
+  });
+})();
+</script>
+{% endblock extra_js %}

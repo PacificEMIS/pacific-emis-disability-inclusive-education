@@ -3,9 +3,13 @@ Views for core models (SchoolStaff, SystemUser, Student, StudentSchoolEnrolment)
 
 Provides CRUD views for managing school staff, their assignments, and students.
 """
+from collections import OrderedDict
 from datetime import timedelta
+from io import StringIO
 
 from django.conf import settings
+from django.core.cache import cache
+from django.core.management import call_command
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.contrib.auth.decorators import login_required
@@ -14,7 +18,7 @@ from django.core.paginator import Paginator
 from django.core.exceptions import PermissionDenied
 from django.db import IntegrityError, transaction
 from django.db.models import Q, Prefetch, OuterRef, Subquery, F
-from django.http import JsonResponse
+from django.http import Http404, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.utils.text import capfirst
@@ -65,7 +69,8 @@ from core.permissions import (
     _in_group,
     _in_any_group,
 )
-from integrations.models import EmisSchool, EmisClassLevel, EmisWarehouseYear
+from integrations.models import EmisSchool, EmisClassLevel, EmisJobTitle, EmisWarehouseYear
+from integrations.management.commands.emis_sync_lookups import LAST_SYNC_CACHE_KEY
 
 
 PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
@@ -2165,3 +2170,145 @@ def delete_pending_user(request, user_id):
             "target_user": target_user,
         },
     )
+
+
+# ============================================================================
+# Settings (EMIS lookups)
+# ============================================================================
+
+# Lookup registry: slug -> model + display config
+LOOKUP_REGISTRY = OrderedDict([
+    ("schools", {
+        "model": EmisSchool,
+        "label": "Schools",
+        "icon": "bi-building",
+        "fields": [("emis_school_no", "School No."), ("emis_school_name", "Name")],
+    }),
+    ("class-levels", {
+        "model": EmisClassLevel,
+        "label": "Class Levels",
+        "icon": "bi-list-ol",
+        "fields": [("code", "Code"), ("label", "Label")],
+    }),
+    ("job-titles", {
+        "model": EmisJobTitle,
+        "label": "Job Titles",
+        "icon": "bi-briefcase",
+        "fields": [("code", "Code"), ("label", "Label")],
+    }),
+    ("school-years", {
+        "model": EmisWarehouseYear,
+        "label": "School Years",
+        "icon": "bi-calendar",
+        "fields": [("code", "Code"), ("label", "Label")],
+    }),
+])
+
+
+@login_required
+def admin_settings(request):
+    """
+    Admin settings page: EMIS lookup sync action and lookup summary.
+
+    Accessible to users in the Admins or System Admins groups.
+    """
+    if not can_manage_pending_users(request.user):
+        raise PermissionDenied
+
+    lookup_categories = [
+        {
+            "slug": slug,
+            "label": config["label"],
+            "icon": config["icon"],
+            "count": config["model"].objects.count(),
+        }
+        for slug, config in LOOKUP_REGISTRY.items()
+    ]
+
+    return render(
+        request,
+        "core/settings.html",
+        {
+            "active": "settings",
+            "lookup_categories": lookup_categories,
+            "last_sync": cache.get(LAST_SYNC_CACHE_KEY),
+            "emis_base_url": settings.EMIS.get("BASE_URL"),
+        },
+    )
+
+
+@login_required
+def sync_emis_lookups(request):
+    """Run the emis_sync_lookups management command (AJAX or plain POST)."""
+    if not can_manage_pending_users(request.user):
+        raise PermissionDenied
+
+    if request.method != "POST":
+        return redirect("core:settings")
+
+    try:
+        out = StringIO()
+        call_command("emis_sync_lookups", stdout=out)
+        msg = out.getvalue().strip()
+        ok = True
+    except Exception as e:
+        logger.exception("EMIS lookups sync failed")
+        msg = f"Sync failed: {e}"
+        ok = False
+
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return JsonResponse({"ok": ok, "message": msg})
+
+    if ok:
+        messages.success(request, msg)
+    else:
+        messages.error(request, msg)
+    return redirect("core:settings")
+
+
+@login_required
+def settings_lookup_list(request, slug):
+    """List view for a single EMIS lookup model."""
+    if not can_manage_pending_users(request.user):
+        raise PermissionDenied
+
+    config = LOOKUP_REGISTRY.get(slug)
+    if not config:
+        raise Http404
+
+    return render(
+        request,
+        "core/settings_lookup_list.html",
+        {
+            "active": "settings",
+            "slug": slug,
+            "config": config,
+            "items": config["model"].objects.all(),
+        },
+    )
+
+
+@login_required
+def settings_lookup_update(request, slug, pk):
+    """AJAX endpoint to toggle the active flag on a lookup item."""
+    if not can_manage_pending_users(request.user):
+        raise PermissionDenied
+
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "message": "POST required"}, status=405)
+
+    config = LOOKUP_REGISTRY.get(slug)
+    if not config:
+        return JsonResponse({"ok": False, "message": "Unknown lookup"}, status=404)
+
+    model = config["model"]
+    try:
+        item = model.objects.get(pk=pk)
+    except model.DoesNotExist:
+        return JsonResponse({"ok": False, "message": "Item not found"}, status=404)
+
+    if "active" in request.POST:
+        item.active = request.POST["active"] == "true"
+        item.save(update_fields=["active"])
+
+    return JsonResponse({"ok": True, "active": item.active})

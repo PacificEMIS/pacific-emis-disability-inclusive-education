@@ -71,4 +71,22 @@ urlpatterns = [
         views.delete_pending_user,
         name="delete_pending_user",
     ),
+
+    # Settings (EMIS lookups sync and review)
+    path("settings/", views.admin_settings, name="settings"),
+    path(
+        "settings/sync-emis-lookups/",
+        views.sync_emis_lookups,
+        name="sync_emis_lookups",
+    ),
+    path(
+        "settings/lookups/<slug:slug>/",
+        views.settings_lookup_list,
+        name="settings_lookup_list",
+    ),
+    path(
+        "settings/lookups/<slug:slug>/<str:pk>/update/",
+        views.settings_lookup_update,
+        name="settings_lookup_update",
+    ),
 ]
