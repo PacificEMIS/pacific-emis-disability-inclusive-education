@@ -1,0 +1,12 @@
+[run]
+source = accounts,core,integrations,pacemis_inclusive_ed
+omit =
+    */migrations/*
+    */tests/*
+    pacemis_inclusive_ed/asgi.py
+    pacemis_inclusive_ed/wsgi.py
+    pacemis_inclusive_ed/settings_test.py
+
+[report]
+show_missing = True
+precision = 1

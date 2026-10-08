@@ -49,17 +49,17 @@ See the generated bundle manifest (`dist/*.manifest.txt`) for up-to-date structu
 
 ## ⚙️ Quick Setup (for developers)
 
-```bash
-# create or activate environment
-conda create -n pacific-emis-disability-inclusive-education python=3.12.12
-conda activate pacific-emis-disability-inclusive-education
+The project uses [uv](https://docs.astral.sh/uv/) to manage a virtual environment in `.venv/` (Python 3.12).
 
-# install dependencies
-pip install -r requirements.txt
+```bash
+# create the environment and install dependencies
+uv venv --python 3.12
+uv pip install -r requirements.txt
 
 # apply migrations and start server
-python manage.py migrate
-python manage.py runserver
+# (Windows: .venv/Scripts/python.exe, macOS/Linux: .venv/bin/python)
+.venv/Scripts/python.exe manage.py migrate
+.venv/Scripts/python.exe manage.py runserver
 ```
 
 Configuration uses the same conventions as Pacific EMIS Core (database URL, authentication, etc.).  
@@ -120,10 +120,52 @@ Sample (first 10 rows):
 
 ---
 
+## 🧪 Testing
+
+The automated test suite uses [pytest](https://docs.pytest.org/) with
+[pytest-django](https://pytest-django.readthedocs.io/). It runs against a
+throwaway PostgreSQL database named `test_<PG_NAME>` that the runner creates
+and drops on every run, so the development database is never touched. The
+PostgreSQL role in `.env` needs the `CREATEDB` privilege for this.
+
+```bash
+# one-time: install the test tooling on top of the runtime dependencies
+uv pip install -r requirements-dev.txt
+
+# run everything
+.venv/Scripts/python.exe -m pytest
+
+# faster re-runs while developing (keeps the test database between runs;
+# add --create-db after changing migrations)
+.venv/Scripts/python.exe -m pytest --reuse-db
+
+# with a coverage report
+.venv/Scripts/python.exe -m pytest --cov --cov-report=term-missing
+```
+
+### Layout and conventions
+
+| Location | Purpose |
+|:---|:---|
+| `pytest.ini`, `.coveragerc` | Runner and coverage configuration. |
+| `pacemis_inclusive_ed/settings_test.py` | Imports the real settings, then overrides only what tests need: in-memory email and cache, fast password hashing, an unreachable EMIS endpoint. |
+| `conftest.py` | Shared `factory_boy` factories and fixtures. One fixture per role (`superuser`, `admin_user`, `system_admin_user`, `system_staff_user`, `school_admin_user`, `teacher_user`, `school_staff_user`, `pending_user`), plus `school_a` (the school every school-level role is assigned to) and `school_b` (a school they are not). |
+| `<app>/tests/` | Tests live in a `tests/` package per app, not a `tests.py` module. |
+| `core/tests/test_smoke_urls.py` | Every named URL is exercised as superuser, anonymous and a locked-out user. A meta-test fails if a URL name is missing from the inventory, so each new view must be added there. |
+| `pacemis_inclusive_ed/tests/test_project_health.py` | Fails when a model change has no migration or a system check breaks. |
+
+Safety nets that apply to every test:
+
+- **No outbound HTTP.** An autouse fixture blocks `requests` at the adapter level. Tests that exercise the EMIS integration mock the client or use the `responses` library.
+- **No real email.** The locmem backend captures messages in `django.core.mail.outbox`.
+- **Groups match production.** The `seed_groups` management command runs once per session, so group names and permissions are the real ones.
+
+---
+
 ## 📜 Licensing & Acknowledgement
 
 - **License:** Refer to LICENSE
 
 ---
 
-_Last updated: November 2025_
+_Last updated: October 2026_

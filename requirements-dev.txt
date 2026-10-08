@@ -1,0 +1,11 @@
+# Development and test-only dependencies. Install on top of requirements.txt:
+#   uv pip install --python .venv/Scripts/python.exe -r requirements-dev.txt
+-r requirements.txt
+coverage==7.16.2
+factory-boy==3.3.3
+Faker==40.41.0
+pytest==9.1.1
+pytest-cov==7.1.0
+pytest-django==4.14.0
+responses==0.26.3
+time-machine==3.5.1
