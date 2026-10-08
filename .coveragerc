@@ -10,3 +10,5 @@ omit =
 [report]
 show_missing = True
 precision = 1
+# Ratchet: raise this as coverage grows, never lower it.
+fail_under = 93

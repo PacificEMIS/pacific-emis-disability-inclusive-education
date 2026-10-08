@@ -154,11 +154,24 @@ uv pip install -r requirements-dev.txt
 | `core/tests/test_smoke_urls.py` | Every named URL is exercised as superuser, anonymous and a locked-out user. A meta-test fails if a URL name is missing from the inventory, so each new view must be added there. |
 | `pacemis_inclusive_ed/tests/test_project_health.py` | Fails when a model change has no migration or a system check breaks. |
 
+| `core/tests/test_permissions.py` | The executable role x action x school matrix. Change `core/permissions.py` and this file together. |
+| `core/tests/test_views_*.py` | Per-role authorisation, row-level filtering and CRUD through the test client. |
+| `integrations/tests/` | EMIS clients with recorded HTTP (`responses`) and the sync commands. |
+
 Safety nets that apply to every test:
 
 - **No outbound HTTP.** An autouse fixture blocks `requests` at the adapter level. Tests that exercise the EMIS integration mock the client or use the `responses` library.
-- **No real email.** The locmem backend captures messages in `django.core.mail.outbox`.
+- **No real email.** The locmem backend captures messages in `django.core.mail.outbox`. Use the `sync_email_threads` fixture to run the fire-and-forget email threads inline.
 - **Groups match production.** The `seed_groups` management command runs once per session, so group names and permissions are the real ones.
+- **Frozen time.** Date-boundary tests use `time_machine` so "today" is deterministic.
+
+### Continuous integration and coverage
+
+`.github/workflows/tests.yml` runs the suite against a PostgreSQL 17 service on every push to `main` and every pull request. `.coveragerc` sets a coverage floor (`fail_under`) that the run must meet; raise it as coverage grows, never lower it.
+
+### Known gaps recorded as expected failures
+
+A test marked `@pytest.mark.xfail(strict=True)` documents behaviour the app should have but does not yet. It fails the suite if the behaviour is ever fixed without removing the marker, so the marker and the fix land together. Search the tests for `xfail` to see the current list.
 
 ---
 
