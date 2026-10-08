@@ -49,6 +49,27 @@ class SchoolStaffAssignmentForm(ModelForm):
             # No user context - restrict to nothing
             self.fields["school"].queryset = EmisSchool.objects.none()
 
+    def clean(self):
+        cleaned = super().clean()
+        # The unique constraint includes school_staff, which is not a form field,
+        # so ModelForm skips it. Check it here to avoid an IntegrityError on save.
+        staff_id = self.instance.school_staff_id
+        school = cleaned.get("school")
+        if staff_id and school:
+            duplicate = SchoolStaffAssignment.objects.filter(
+                school_staff_id=staff_id,
+                school=school,
+                start_date=cleaned.get("start_date"),
+                end_date=cleaned.get("end_date"),
+            ).exclude(pk=self.instance.pk)
+            if duplicate.exists():
+                self.add_error(
+                    "school",
+                    "This staff member already has an assignment at this school "
+                    "with the same start and end dates.",
+                )
+        return cleaned
+
 
 class SchoolStaffEditForm(forms.Form):
     """
@@ -311,6 +332,27 @@ class StudentEnrolmentForm(forms.ModelForm):
                 field.widget.attrs["class"] = (
                     existing + " form-select form-select-sm"
                 ).strip()
+
+    def clean(self):
+        cleaned = super().clean()
+        # The unique constraint includes student, which is not a form field,
+        # so ModelForm skips it. Check it here to avoid an IntegrityError on save.
+        student_id = self.instance.student_id
+        school = cleaned.get("school")
+        school_year = cleaned.get("school_year")
+        if student_id and school and school_year:
+            duplicate = StudentSchoolEnrolment.objects.filter(
+                student_id=student_id,
+                school=school,
+                school_year=school_year,
+            ).exclude(pk=self.instance.pk)
+            if duplicate.exists():
+                self.add_error(
+                    "school",
+                    "This student already has an enrolment at this school "
+                    "for this school year.",
+                )
+        return cleaned
 
 
 # ============================================================================
