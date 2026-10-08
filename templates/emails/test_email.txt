@@ -1,0 +1,21 @@
+{{ emis_context }} {{ app_name }}: Test email
+================================================================================
+
+Hello,
+
+This is a test email sent from the {{ emis_context }} {{ app_name }} app.
+If you are reading this, the server is able to send email.
+
+Test Details
+------------
+Requested by: {{ sent_by.get_full_name|default:sent_by.username }} ({{ sent_by.email }})
+Sent at: {{ sent_at|date:"Y-m-d H:i" }} UTC
+Mail server: {{ email_host }}:{{ email_port }}
+From address: {{ from_email }}
+
+No action is required. This message was sent by an administrator to check
+that email delivery is working.
+
+--------------------------------------------------------------------------------
+This message was sent by the {{ emis_context }} {{ app_name }} app.
+If you believe you received it in error, please contact your EMIS administrator.

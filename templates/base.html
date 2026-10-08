@@ -101,6 +101,15 @@
                       <i class="bi bi-gear me-2"></i> Settings
                     </a>
                   </li>
+                  <li class="nav-item mt-3">
+                    <span class="sidebar-section-label px-3 small text-uppercase text-light">Utilities</span>
+                  </li>
+                  <li>
+                    <a class="nav-link d-flex align-items-center text-light {% if active == 'test_email' %}active{% endif %}"
+                       href="{% url 'core:test_email' %}">
+                      <i class="bi bi-envelope-check me-2"></i> Test Email
+                    </a>
+                  </li>
                 {% endif %}
               </ul>
             </nav>

@@ -3,6 +3,7 @@ from django.contrib.auth.models import Group, AbstractUser
 from django.contrib.auth import get_user_model
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
+from django.utils import timezone
 from django.urls import reverse
 
 import logging
@@ -241,3 +242,39 @@ def send_new_pending_user_email_async(new_user, pending_users_url=None):
             )
 
     Thread(target=_worker, daemon=True).start()
+
+
+def send_test_email(*, recipient, sent_by):
+    """
+    Send a simple test email to confirm the server can deliver mail.
+
+    Runs synchronously and raises on failure so the caller can report
+    the SMTP error back to the administrator who triggered the test.
+    """
+    app_name = getattr(settings, "APP_NAME", "Disability Inclusive Education")
+    emis_context = settings.EMIS.get("CONTEXT", "Pacific EMIS")
+
+    context = {
+        "sent_by": sent_by,
+        "sent_at": timezone.now(),
+        "email_host": settings.EMAIL_HOST,
+        "email_port": settings.EMAIL_PORT,
+        "from_email": settings.DEFAULT_FROM_EMAIL,
+        "emis_context": emis_context,
+        "app_name": app_name,
+    }
+
+    subject = f"{emis_context} {app_name}: Test email"
+
+    text_body = render_to_string("emails/test_email.txt", context)
+    html_body = render_to_string("emails/test_email.html", context)
+
+    msg = EmailMultiAlternatives(
+        subject=subject,
+        body=text_body,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        to=[recipient],
+    )
+    msg.attach_alternative(html_body, "text/html")
+    msg.send(fail_silently=False)
+    logger.info("send_test_email: sent to %s by %s", recipient, sent_by)

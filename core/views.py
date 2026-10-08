@@ -37,9 +37,10 @@ from core.forms import (
     StudentDisabilityIntakeForm,
     StudentEnrolmentForm,
     SystemUserEditForm,
+    TestEmailForm,
 )
 from core.cft_meta import CFT_QUESTION_META, build_cft_meta_for_name
-from core.emails import send_student_created_email_async
+from core.emails import send_student_created_email_async, send_test_email
 from core.permissions import (
     filter_staff_for_user,
     can_view_staff,
@@ -2312,3 +2313,52 @@ def settings_lookup_update(request, slug, pk):
         item.save(update_fields=["active"])
 
     return JsonResponse({"ok": True, "active": item.active})
+
+
+# ============================================================================
+# Utilities
+# ============================================================================
+
+
+@login_required
+def test_email(request):
+    """Send a test email so admins can confirm the server can deliver mail."""
+    if not can_manage_pending_users(request.user):
+        raise PermissionDenied
+
+    if request.method == "POST":
+        form = TestEmailForm(request.POST)
+        if form.is_valid():
+            recipient = form.cleaned_data["recipient"]
+            try:
+                send_test_email(recipient=recipient, sent_by=request.user)
+            except Exception as e:
+                logger.exception("test_email: sending to %s failed", recipient)
+                messages.error(
+                    request,
+                    f"Sending the test email to {recipient} failed: {type(e).__name__}: {e}",
+                )
+            else:
+                messages.success(
+                    request,
+                    f"Test email sent to {recipient}. Check that mailbox (including spam) to confirm delivery.",
+                )
+                return redirect("core:test_email")
+    else:
+        form = TestEmailForm(initial={"recipient": request.user.email})
+
+    email_config = {
+        "host": settings.EMAIL_HOST,
+        "port": settings.EMAIL_PORT,
+        "user": settings.EMAIL_HOST_USER,
+        "use_tls": settings.EMAIL_USE_TLS,
+        "use_ssl": settings.EMAIL_USE_SSL,
+        "from_email": settings.DEFAULT_FROM_EMAIL,
+        "backend": settings.EMAIL_BACKEND,
+    }
+
+    return render(
+        request,
+        "core/test_email.html",
+        {"active": "test_email", "form": form, "email_config": email_config},
+    )

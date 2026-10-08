@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Test Email{% endblock title %}
+{% block content %}
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item active" aria-current="page">Test Email</li>
+    </ol>
+  </nav>
+
+  <div class="row">
+    <div class="col-12 col-lg-8">
+      <div class="card shadow-sm">
+        <div class="card-header">
+          <h1 class="h5 mb-0">
+            <i class="bi bi-envelope-check me-2"></i>
+            Test Email
+          </h1>
+        </div>
+        <div class="card-body">
+          <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+              <label for="{{ form.recipient.id_for_label }}" class="form-label">{{ form.recipient.label }}</label>
+              {{ form.recipient }}
+              {% if form.recipient.help_text %}
+                <div class="form-text">{{ form.recipient.help_text }}</div>
+              {% endif %}
+              {% if form.recipient.errors %}
+                <div class="invalid-feedback d-block">{{ form.recipient.errors|join:", " }}</div>
+              {% endif %}
+            </div>
+
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-send me-1"></i> Send Test Email
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <div class="card shadow-sm mt-3">
+        <div class="card-header">
+          <h2 class="h6 mb-0"><i class="bi bi-sliders me-1"></i> Current Email Configuration</h2>
+        </div>
+        <div class="card-body">
+          <dl class="row mb-0 small">
+            <dt class="col-sm-3">Backend</dt>
+            <dd class="col-sm-9">{{ email_config.backend }}</dd>
+            <dt class="col-sm-3">Mail server</dt>
+            <dd class="col-sm-9">{{ email_config.host }}:{{ email_config.port }}</dd>
+            <dt class="col-sm-3">Encryption</dt>
+            <dd class="col-sm-9">
+              {% if email_config.use_ssl %}
+                SSL
+              {% elif email_config.use_tls %}
+                TLS
+              {% else %}
+                None
+              {% endif %}
+            </dd>
+            <dt class="col-sm-3">Login user</dt>
+            <dd class="col-sm-9">{{ email_config.user|default:"Not set" }}</dd>
+            <dt class="col-sm-3">From address</dt>
+            <dd class="col-sm-9 mb-0">{{ email_config.from_email }}</dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+
+    {# ── Help panel ── #}
+    <div class="col-12 col-lg-4 mt-3 mt-lg-0">
+      <div class="card shadow-sm">
+        <div class="card-header">
+          <h2 class="h6 mb-0"><i class="bi bi-info-circle me-1"></i> About Test Email</h2>
+        </div>
+        <div class="card-body small">
+          <p>
+            Sends a short test message through the same mail server the app
+            uses for all its notifications. Use it to confirm the server can
+            still send email, for example when a user reports not receiving
+            a notification.
+          </p>
+          <p class="mb-2">
+            The email is sent immediately. If the mail server rejects it, the
+            error reported by the server is shown here so you can pass it on to
+            whoever manages the email account.
+          </p>
+          <hr>
+          <h3 class="h6">Tips</h3>
+          <ul class="mb-0">
+            <li>Check the spam or junk folder if the message does not arrive within a few minutes.</li>
+            <li>A success message here means the mail server accepted the message, not that it reached the inbox.</li>
+            <li>The login password is never shown on this page.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock content %}
