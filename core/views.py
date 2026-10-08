@@ -337,7 +337,11 @@ def staff_detail(request, pk):
     can_add_assignment = can_create_staff_assignment(request.user)
 
     assignment_form = (
-        SchoolStaffAssignmentForm(request.POST or None, user=request.user)
+        SchoolStaffAssignmentForm(
+            request.POST or None,
+            instance=SchoolStaffAssignment(school_staff=staff),
+            user=request.user,
+        )
         if can_add_assignment
         else None
     )
@@ -1843,7 +1847,9 @@ def student_enrolment_add(request, student_pk):
         raise PermissionDenied
 
     if request.method == "POST":
-        form = StudentEnrolmentForm(request.POST)
+        form = StudentEnrolmentForm(
+            request.POST, instance=StudentSchoolEnrolment(student=student)
+        )
         # ---- limit schools for this user ----
         form.fields["school"].queryset = get_allowed_enrolment_schools(request.user)
 
