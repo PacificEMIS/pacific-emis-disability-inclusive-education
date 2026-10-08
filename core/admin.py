@@ -2,7 +2,6 @@
 from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from django.utils import timezone
 from django.utils.html import format_html
 
 from core.models import SchoolStaff, SchoolStaffAssignment, SystemUser, Student, StudentSchoolEnrolment
@@ -131,10 +130,7 @@ class SchoolStaffAssignmentInline(admin.TabularInline):
 
     def active_now(self, obj):
         """Computed 'active' indicator based on start/end dates."""
-        today = timezone.now().date()
-        starts_ok = (obj.start_date is None) or (obj.start_date <= today)
-        ends_ok = (obj.end_date is None) or (obj.end_date >= today)
-        return bool(starts_ok and ends_ok)
+        return obj.is_active
 
     active_now.boolean = True
     active_now.short_description = "Active now"

@@ -146,10 +146,25 @@ class SchoolStaff(AuditModel):
         Returns:
             QuerySet[SchoolStaffAssignment]: Active assignments for this staff member
         """
-        today = timezone.now().date()
-        return self.assignments.filter(
-            models.Q(end_date__isnull=True) | models.Q(end_date__gte=today)
-        )
+        return self.assignments.filter(active_assignment_q())
+
+
+def active_assignment_q(prefix=""):
+    """
+    Q object selecting assignments that are active today: start_date is
+    empty or not in the future, and end_date is empty or not in the past.
+
+    ``prefix`` lets the same rule be applied across a relation, for example
+    ``active_assignment_q("assignments__")`` on a SchoolStaff queryset.
+    """
+    today = timezone.now().date()
+    return (
+        models.Q(**{f"{prefix}start_date__isnull": True})
+        | models.Q(**{f"{prefix}start_date__lte": today})
+    ) & (
+        models.Q(**{f"{prefix}end_date__isnull": True})
+        | models.Q(**{f"{prefix}end_date__gte": today})
+    )
 
 
 class SchoolStaffAssignment(AuditModel):
@@ -171,8 +186,7 @@ class SchoolStaffAssignment(AuditModel):
         last_updated_by (User): Who last modified this record
 
     Note:
-        The is_active property considers an assignment active if end_date is None.
-        Use the active_now admin method for date-range-based active status.
+        The is_active property considers an assignment active if it covers today.
 
     Example:
         >>> assignment = SchoolStaffAssignment.objects.create(
@@ -233,19 +247,18 @@ class SchoolStaffAssignment(AuditModel):
     @property
     def is_active(self):
         """
-        Check if this assignment is marked as active.
+        Check if this assignment is active today.
 
-        An assignment is considered active if it has no end_date set.
-        This is a simple active/inactive flag, not date-range based.
+        Active means start_date is empty or not in the future, and end_date
+        is empty or not in the past. Same rule as active_assignment_q().
 
         Returns:
-            bool: True if end_date is None, False otherwise
-
-        Note:
-            For date-range-based active status (checking if assignment
-            is active TODAY), use the admin's active_now method.
+            bool: True if the assignment covers today
         """
-        return self.end_date is None
+        today = timezone.now().date()
+        starts_ok = self.start_date is None or self.start_date <= today
+        ends_ok = self.end_date is None or self.end_date >= today
+        return starts_ok and ends_ok
 
 
 class SystemUser(AuditModel):
