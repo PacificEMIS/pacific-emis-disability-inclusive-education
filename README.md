@@ -139,7 +139,7 @@ uv pip install -r requirements-dev.txt
 # add --create-db after changing migrations)
 .venv/Scripts/python.exe -m pytest --reuse-db
 
-# with a coverage report
+# with a coverage report (this is what the pre-push hook runs)
 .venv/Scripts/python.exe -m pytest --cov --cov-report=term-missing
 ```
 
@@ -165,9 +165,19 @@ Safety nets that apply to every test:
 - **Groups match production.** The `seed_groups` management command runs once per session, so group names and permissions are the real ones.
 - **Frozen time.** Date-boundary tests use `time_machine` so "today" is deterministic.
 
-### Continuous integration and coverage
+### Pre-push hook and coverage floor
 
-`.github/workflows/tests.yml` runs the suite against a PostgreSQL 17 service on every push to `main` and every pull request. `.coveragerc` sets a coverage floor (`fail_under`) that the run must meet; raise it as coverage grows, never lower it.
+The gate is local, with no dependency on a hosted CI service. A versioned
+pre-push hook runs the whole suite with coverage and aborts the push if a
+test fails or coverage drops below the floor in `.coveragerc`. Enable it
+once per clone:
+
+```bash
+git config core.hooksPath scripts/git-hooks
+```
+
+Skip it for a single push with `git push --no-verify`. Raise the floor
+(`fail_under`) as coverage grows; never lower it.
 
 ### Known gaps recorded as expected failures
 

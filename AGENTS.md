@@ -32,8 +32,9 @@ README.md for how to run it and the conventions for adding tests.
   fails otherwise.
 - Outbound HTTP is blocked in tests. Mock the EMIS clients or use `responses`.
 - A change to `core/permissions.py` must be mirrored in `core/tests/test_permissions.py`.
-- CI (`.github/workflows/tests.yml`) enforces the coverage floor in `.coveragerc`.
-  Raise the floor when coverage grows; never lower it.
+- The pre-push hook in `scripts/git-hooks/` runs the suite with coverage and
+  enforces the floor in `.coveragerc`. Raise the floor when coverage grows;
+  never lower it. There is no hosted CI by design; do not add one.
 - Test work is additive. If a test reveals an application bug, report it (or record it
   as a strict `xfail`) rather than silently changing behaviour in the same change.
 
