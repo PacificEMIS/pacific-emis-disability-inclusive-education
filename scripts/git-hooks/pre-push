@@ -1,0 +1,26 @@
+#!/bin/sh
+# Pre-push hook: run the full test suite with the coverage floor before any
+# commit leaves this machine. Enable it once per clone with:
+#
+#   git config core.hooksPath scripts/git-hooks
+#
+# Skip it for a single push (for example to park work on a branch) with:
+#
+#   git push --no-verify
+
+cd "$(git rev-parse --show-toplevel)" || exit 1
+
+if [ -f .venv/Scripts/python.exe ]; then
+    PYTHON=.venv/Scripts/python.exe
+elif [ -f .venv/bin/python ]; then
+    PYTHON=.venv/bin/python
+else
+    echo "pre-push: no interpreter found in .venv/ (see README, Quick Setup)" >&2
+    exit 1
+fi
+
+echo "pre-push: running the test suite with the coverage floor..."
+if ! "$PYTHON" -m pytest --cov -q -p no:cacheprovider; then
+    echo "pre-push: tests failed or coverage is below the floor; push aborted" >&2
+    exit 1
+fi

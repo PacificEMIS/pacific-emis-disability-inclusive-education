@@ -537,11 +537,12 @@ def staff_edit(request, pk):
             # Update groups only if user has permission
             if can_edit_groups:
                 new_groups = form.cleaned_data["groups"]
-                # Only update school-level groups, preserve any other groups
-                school_groups = ["Admins", "School Admins", "School Staff", "Teachers"]
-                # Remove old school-level groups
+                # Only touch the groups this editor is allowed to assign
+                # (the form's queryset), so an Admins membership the editor
+                # cannot grant is never stripped and unrelated groups are kept.
+                assignable = form.fields["groups"].queryset
                 staff.user.groups.remove(
-                    *staff.user.groups.filter(name__in=school_groups)
+                    *staff.user.groups.filter(pk__in=assignable.values("pk"))
                 )
                 # Add new groups
                 staff.user.groups.add(*new_groups)
@@ -773,11 +774,12 @@ def system_user_edit(request, pk):
             # Update groups only if user has permission
             if can_edit_groups:
                 new_groups = form.cleaned_data["groups"]
-                # Only update system-level groups, preserve any other groups
-                system_groups = ["Admins", "System Admins", "System Staff"]
-                # Remove old system-level groups
+                # Only touch the groups this editor is allowed to assign
+                # (the form's queryset), so an Admins membership the editor
+                # cannot grant is never stripped and unrelated groups are kept.
+                assignable = form.fields["groups"].queryset
                 system_user.user.groups.remove(
-                    *system_user.user.groups.filter(name__in=system_groups)
+                    *system_user.user.groups.filter(pk__in=assignable.values("pk"))
                 )
                 # Add new groups
                 system_user.user.groups.add(*new_groups)
@@ -1760,12 +1762,20 @@ def student_matches(request):
 
     - Uses rapidfuzz-based similarity on first and last name.
     - If date_of_birth is provided, it must match exactly.
+    - Candidates are limited by the same row-level rules as the student list,
+      so school-level users only see students at their own schools.
     """
     first_name_q = (request.GET.get("first_name") or "").strip()
     last_name_q = (request.GET.get("last_name") or "").strip()
     dob_raw = (request.GET.get("date_of_birth") or "").strip()
 
-    qs = Student.objects.all()
+    enrol_qs = StudentSchoolEnrolment.objects.filter(student=OuterRef("pk")).order_by(
+        "-school_year__code", "-created_at", "-id"
+    )
+    qs = Student.objects.annotate(
+        latest_school_no=Subquery(enrol_qs.values("school__emis_school_no")[:1])
+    )
+    qs = filter_students_for_user(qs, request.user)
 
     # If DOB is provided, use it as a hard filter (very strong signal)
     date_of_birth = parse_date(dob_raw) if dob_raw else None
