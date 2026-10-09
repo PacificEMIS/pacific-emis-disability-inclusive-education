@@ -315,16 +315,16 @@ class TestStaffEdit:
         self._post(client_for(admin_user), teacher_user.school_staff, ["School Staff"])
         assert set(teacher_user.groups.values_list("name", flat=True)) == {"School Staff", "Reporting"}
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason="Known gap: an editor who cannot assign Admins still strips an existing Admins "
-        "membership, because the view removes all school-level groups before re-adding the "
-        "submitted ones. Track as its own issue; the test documents the intended behaviour.",
-    )
     def test_limited_editor_does_not_strip_existing_admins_membership(
         self, client_for, school_admin_user, school_a, job_title, make_school_user
     ):
+        """An editor who cannot grant Admins must not remove it either."""
         target = make_school_user("Admins", schools=[school_a], username="target-admin")
         target.groups.add(Group.objects.get(name="Teachers"))
-        self._post(client_for(school_admin_user), target.school_staff, ["Teachers"])
-        assert target.groups.filter(name="Admins").exists()
+        self._post(client_for(school_admin_user), target.school_staff, ["School Staff"])
+        assert set(target.groups.values_list("name", flat=True)) == {"Admins", "School Staff"}
+
+    def test_full_editor_can_remove_admins_membership(self, client_for, admin_user, school_a, make_school_user):
+        target = make_school_user("Admins", schools=[school_a], username="target-admin")
+        self._post(client_for(admin_user), target.school_staff, ["Teachers"])
+        assert set(target.groups.values_list("name", flat=True)) == {"Teachers"}

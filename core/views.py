@@ -537,11 +537,12 @@ def staff_edit(request, pk):
             # Update groups only if user has permission
             if can_edit_groups:
                 new_groups = form.cleaned_data["groups"]
-                # Only update school-level groups, preserve any other groups
-                school_groups = ["Admins", "School Admins", "School Staff", "Teachers"]
-                # Remove old school-level groups
+                # Only touch the groups this editor is allowed to assign
+                # (the form's queryset), so an Admins membership the editor
+                # cannot grant is never stripped and unrelated groups are kept.
+                assignable = form.fields["groups"].queryset
                 staff.user.groups.remove(
-                    *staff.user.groups.filter(name__in=school_groups)
+                    *staff.user.groups.filter(pk__in=assignable.values("pk"))
                 )
                 # Add new groups
                 staff.user.groups.add(*new_groups)
@@ -773,11 +774,12 @@ def system_user_edit(request, pk):
             # Update groups only if user has permission
             if can_edit_groups:
                 new_groups = form.cleaned_data["groups"]
-                # Only update system-level groups, preserve any other groups
-                system_groups = ["Admins", "System Admins", "System Staff"]
-                # Remove old system-level groups
+                # Only touch the groups this editor is allowed to assign
+                # (the form's queryset), so an Admins membership the editor
+                # cannot grant is never stripped and unrelated groups are kept.
+                assignable = form.fields["groups"].queryset
                 system_user.user.groups.remove(
-                    *system_user.user.groups.filter(name__in=system_groups)
+                    *system_user.user.groups.filter(pk__in=assignable.values("pk"))
                 )
                 # Add new groups
                 system_user.user.groups.add(*new_groups)

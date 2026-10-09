@@ -116,6 +116,20 @@ class TestSystemUserEdit:
         self._post(client_for(system_admin_user), su, ["System Admins"])
         assert su.user.groups.filter(name="System Admins").exists()
 
+    def test_limited_editor_does_not_strip_existing_admins_membership(
+        self, client_for, system_admin_user, make_system_user
+    ):
+        """An editor who cannot grant Admins must not remove it either."""
+        target = make_system_user("Admins", username="target-admin")
+        target.groups.add(Group.objects.get(name="System Staff"))
+        self._post(client_for(system_admin_user), target.system_user, ["System Admins"])
+        assert set(target.groups.values_list("name", flat=True)) == {"Admins", "System Admins"}
+
+    def test_full_editor_can_remove_admins_membership(self, client_for, admin_user, make_system_user):
+        target = make_system_user("Admins", username="target-admin")
+        self._post(client_for(admin_user), target.system_user, ["System Staff"])
+        assert set(target.groups.values_list("name", flat=True)) == {"System Staff"}
+
     def test_school_level_groups_are_preserved(self, client_for, superuser, system_users):
         su = system_users["moe"]
         su.user.groups.add(Group.objects.get(name="Teachers"))
