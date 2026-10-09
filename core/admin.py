@@ -81,13 +81,14 @@ class CustomUserAdmin(BaseUserAdmin):
         has_system_user = hasattr(obj, "system_user") and obj.system_user is not None
 
         if has_school_staff and has_system_user:
-            return format_html('<span style="color: orange;">⚠ Both roles</span>')
+            color, label = "orange", "⚠ Both roles"
         elif has_school_staff:
-            return format_html('<span style="color: green;">✓ School Staff</span>')
+            color, label = "green", "✓ School Staff"
         elif has_system_user:
-            return format_html('<span style="color: blue;">✓ System User</span>')
+            color, label = "blue", "✓ System User"
         else:
-            return format_html('<span style="color: red;">✗ No role</span>')
+            color, label = "red", "✗ No role"
+        return format_html('<span style="color: {};">{}</span>', color, label)
 
     role_status.short_description = "Role Status"
 
