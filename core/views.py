@@ -1760,12 +1760,20 @@ def student_matches(request):
 
     - Uses rapidfuzz-based similarity on first and last name.
     - If date_of_birth is provided, it must match exactly.
+    - Candidates are limited by the same row-level rules as the student list,
+      so school-level users only see students at their own schools.
     """
     first_name_q = (request.GET.get("first_name") or "").strip()
     last_name_q = (request.GET.get("last_name") or "").strip()
     dob_raw = (request.GET.get("date_of_birth") or "").strip()
 
-    qs = Student.objects.all()
+    enrol_qs = StudentSchoolEnrolment.objects.filter(student=OuterRef("pk")).order_by(
+        "-school_year__code", "-created_at", "-id"
+    )
+    qs = Student.objects.annotate(
+        latest_school_no=Subquery(enrol_qs.values("school__emis_school_no")[:1])
+    )
+    qs = filter_students_for_user(qs, request.user)
 
     # If DOB is provided, use it as a hard filter (very strong signal)
     date_of_birth = parse_date(dob_raw) if dob_raw else None

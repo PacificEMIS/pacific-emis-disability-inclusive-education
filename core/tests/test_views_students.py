@@ -321,14 +321,17 @@ class TestStudentMatches:
         response = client_for(superuser).get(self.url, {"first_name": "Ana", "last_name": "Teata"})
         assert len(self._ids(response)) == 10
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason="Known gap: student_matches only checks login, so school-level users can probe "
-        "names across every school. Track as its own issue.",
-    )
     def test_school_role_cannot_match_students_at_other_schools(self, client_for, teacher_user, students):
         response = client_for(teacher_user).get(self.url, {"first_name": "Bati", "last_name": "Mwemwe"})
         assert self._ids(response) == []
+
+    def test_school_role_matches_students_at_own_school(self, client_for, teacher_user, students):
+        response = client_for(teacher_user).get(self.url, {"first_name": "Ana", "last_name": "Teata"})
+        assert self._ids(response) == [students["a"].pk]
+
+    def test_pending_user_gets_no_matches(self, client_for, pending_user, students):
+        response = client_for(pending_user).get(self.url, {"first_name": "Ana", "last_name": "Teata"})
+        assert response.status_code in (302, 403)
 
 
 # ============================================================================
