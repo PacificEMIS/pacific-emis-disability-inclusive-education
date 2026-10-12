@@ -1554,7 +1554,7 @@ def student_list(request):
     # Picklists (active only; adjust if you want all)
     schools = EmisSchool.objects.filter(active=True).order_by("emis_school_name")
     years = EmisWarehouseYear.objects.filter(active=True).order_by("-code")
-    levels = EmisClassLevel.objects.filter(active=True).order_by("code")
+    levels = EmisClassLevel.objects.filter(active=True).order_by("year_of_education", "code")
 
     # Pagination links
     page_links = _page_links(page_obj)
@@ -2381,7 +2381,7 @@ LOOKUP_REGISTRY = OrderedDict([
         "model": EmisClassLevel,
         "label": "Class Levels",
         "icon": "bi-list-ol",
-        "fields": [("code", "Code"), ("label", "Label")],
+        "fields": [("code", "Code"), ("label", "Label"), ("year_of_education", "Year of education")],
     }),
     ("job-titles", {
         "model": EmisJobTitle,

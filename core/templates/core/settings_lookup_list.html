@@ -32,7 +32,7 @@
             {% for item in items %}
               <tr data-pk="{{ item.pk }}">
                 {% for field_name, field_label in config.fields %}
-                  <td>{{ item|getfield:field_name }}</td>
+                  <td>{{ item|getfield:field_name|default_if_none:"—" }}</td>
                 {% endfor %}
                 <td class="text-center">
                   <div class="form-check form-switch d-flex justify-content-center">

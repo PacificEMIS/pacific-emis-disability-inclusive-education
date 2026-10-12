@@ -266,7 +266,7 @@ class StudentDisabilityIntakeForm(forms.Form):
     )
     class_level = forms.ModelChoiceField(
         label="Class level",
-        queryset=EmisClassLevel.objects.filter(active=True).order_by("code"),
+        queryset=EmisClassLevel.objects.filter(active=True).order_by("year_of_education", "code"),
         widget=forms.Select(attrs={"class": "form-select form-select-sm"}),
     )
 
