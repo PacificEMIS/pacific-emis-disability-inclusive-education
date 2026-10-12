@@ -124,6 +124,7 @@ class TestRoleHelpers:
             perms.has_app_access,
             perms.can_create_student,
             perms.can_manage_pending_users,
+            perms.can_onboard_school_staff,
             perms.can_assign_admins_group,
         ],
     )
@@ -534,6 +535,17 @@ class TestSystemUserPermissions:
     @pytest.mark.parametrize("role,expected", expect(SYSTEM_WIDE))
     def test_can_manage_pending_users(self, request, role, expected):
         assert perms.can_manage_pending_users(request.getfixturevalue(role)) is expected
+
+    @pytest.mark.parametrize("role,expected", expect(SYSTEM_WIDE | {"school_admin_user"}))
+    def test_can_onboard_school_staff(self, request, role, expected):
+        """School Admins may on-board staff at their own schools (issue #74)."""
+        assert perms.can_onboard_school_staff(request.getfixturevalue(role)) is expected
+
+    def test_school_admin_without_active_school_cannot_onboard(self, school_admin_user):
+        SchoolStaffAssignment.objects.filter(school_staff__user=school_admin_user).update(
+            end_date=dt.date.today() - dt.timedelta(days=1)
+        )
+        assert perms.can_onboard_school_staff(school_admin_user) is False
 
     @pytest.mark.parametrize("role,expected", expect({"superuser", "admin_user"}))
     def test_can_assign_admins_group(self, request, role, expected):

@@ -1971,7 +1971,7 @@ def student_enrolment_delete(request, student_pk, enrolment_pk):
 
 from django.contrib.auth import get_user_model
 from core.forms import AssignSchoolStaffForm, AssignSystemUserForm
-from core.permissions import can_manage_pending_users
+from core.permissions import can_manage_pending_users, can_onboard_school_staff
 
 User = get_user_model()
 
@@ -1982,9 +1982,10 @@ def pending_users_list(request):
     List users who have signed in (via Google OAuth) but don't yet have
     a SchoolStaff or SystemUser profile assigned.
 
-    Accessible to users in the Admins or System Admins groups.
+    Accessible to users in the Admins or System Admins groups, and to
+    School Admins with an active school (who only get the School Staff action).
     """
-    if not can_manage_pending_users(request.user):
+    if not can_onboard_school_staff(request.user):
         raise PermissionDenied
 
     q = (request.GET.get("q") or "").strip()
@@ -2035,12 +2036,15 @@ def pending_users_list(request):
 @login_required
 def assign_school_staff(request, user_id):
     """
-    Assign a pending user as School Staff.
+    Assign a pending user as School Staff in a single step.
 
-    Creates a SchoolStaff profile and assigns them to selected groups.
-    Accessible to users in the Admins or System Admins groups.
+    Creates a SchoolStaff profile, assigns the selected groups and creates
+    the first school assignment (school, job title, start date).
+    Accessible to Admins, System Admins and School Admins with an active
+    school; the form restricts what each role may choose and the school is
+    re-checked here against can_create_staff_assignment.
     """
-    if not can_manage_pending_users(request.user):
+    if not can_onboard_school_staff(request.user):
         raise PermissionDenied
 
     target_user = get_object_or_404(User, pk=user_id)
@@ -2053,21 +2057,40 @@ def assign_school_staff(request, user_id):
     if request.method == "POST":
         form = AssignSchoolStaffForm(request.POST, user=request.user)
         if form.is_valid():
-            # Create SchoolStaff profile
-            staff = SchoolStaff.objects.create(
-                user=target_user,
-                staff_type=form.cleaned_data["staff_type"],
-                created_by=request.user,
-                last_updated_by=request.user,
-            )
+            school = form.cleaned_data["school"]
+            if not can_create_staff_assignment(request.user, school):
+                form.add_error(
+                    "school",
+                    f"You do not have permission to assign staff to {school.emis_school_name}.",
+                )
+        if form.is_valid():
+            with transaction.atomic():
+                # Create SchoolStaff profile
+                staff = SchoolStaff.objects.create(
+                    user=target_user,
+                    staff_type=form.staff_type(),
+                    created_by=request.user,
+                    last_updated_by=request.user,
+                )
 
-            # Assign groups
-            groups = form.cleaned_data["groups"]
-            target_user.groups.add(*groups)
+                # Assign groups
+                groups = form.cleaned_data["groups"]
+                target_user.groups.add(*groups)
+
+                # First school assignment
+                SchoolStaffAssignment.objects.create(
+                    school_staff=staff,
+                    school=school,
+                    job_title=form.cleaned_data["job_title"],
+                    start_date=form.cleaned_data["start_date"],
+                    created_by=request.user,
+                    last_updated_by=request.user,
+                )
 
             messages.success(
                 request,
-                f"{target_user.get_full_name() or target_user.username} has been assigned as School Staff.",
+                f"{target_user.get_full_name() or target_user.username} has been assigned as "
+                f"School Staff at {school.emis_school_name}.",
             )
             return redirect("core:staff_detail", pk=staff.pk)
     else:

@@ -74,16 +74,18 @@
                      title="Assign as School Staff">
                     <i class="bi bi-people"></i> School Staff
                   </a>
-                  <a href="{% url 'core:assign_system_user' user.pk %}"
-                     class="btn btn-outline-primary"
-                     title="Assign as {{ terminology.system_users_singular }}">
-                    <i class="bi bi-building"></i> {{ terminology.system_users_singular }}
-                  </a>
-                  <a href="{% url 'core:delete_pending_user' user.pk %}"
-                     class="btn btn-outline-danger"
-                     title="Delete user">
-                    <i class="bi bi-trash"></i>
-                  </a>
+                  {% if can_manage_pending_users %}
+                    <a href="{% url 'core:assign_system_user' user.pk %}"
+                       class="btn btn-outline-primary"
+                       title="Assign as {{ terminology.system_users_singular }}">
+                      <i class="bi bi-building"></i> {{ terminology.system_users_singular }}
+                    </a>
+                    <a href="{% url 'core:delete_pending_user' user.pk %}"
+                       class="btn btn-outline-danger"
+                       title="Delete user">
+                      <i class="bi bi-trash"></i>
+                    </a>
+                  {% endif %}
                 </div>
               </td>
             </tr>
@@ -137,8 +139,13 @@
     <div class="alert alert-info small mb-0">
       <i class="bi bi-info-circle me-1"></i>
       <strong>Tip:</strong> Users appear here after signing in via Google OAuth for the first time.
-      Assign them as <strong>School Staff</strong> (for teachers, principals, school-based staff) or
-      <strong>{{ terminology.system_users_singular }}</strong> (for ministry officials, analysts, system administrators).
+      {% if can_manage_pending_users %}
+        Assign them as <strong>School Staff</strong> (for teachers, principals, school-based staff) or
+        <strong>{{ terminology.system_users_singular }}</strong> (for ministry officials, analysts, system administrators).
+      {% else %}
+        Pick <strong>School Staff</strong> next to a person you know to add them to your school.
+        Only staff from your own school(s) should be on-boarded here.
+      {% endif %}
     </div>
   </div>
 {% endblock content %}

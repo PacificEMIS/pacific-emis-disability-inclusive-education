@@ -1,10 +1,11 @@
 from django import forms
 from django.contrib.auth.models import Group
 from django.forms import ModelForm
+from django.utils import timezone
 
 from core.models import SchoolStaff, SchoolStaffAssignment, Student, StudentSchoolEnrolment, SystemUser
 from core.permissions import is_admin, is_admins_group, is_school_admin, get_user_schools, GROUP_SYSTEM_ADMINS, _in_group, can_assign_admins_group
-from integrations.models import EmisSchool, EmisWarehouseYear, EmisClassLevel
+from integrations.models import EmisSchool, EmisWarehouseYear, EmisClassLevel, EmisJobTitle
 from core.cft_meta import CFT_QUESTION_META
 
 
@@ -362,20 +363,27 @@ class StudentEnrolmentForm(forms.ModelForm):
 
 class AssignSchoolStaffForm(forms.Form):
     """
-    Form to assign a pending user as School Staff.
+    Form to assign a pending user as School Staff in a single step.
 
-    Creates a SchoolStaff profile and assigns them to groups.
+    Creates a SchoolStaff profile, assigns groups and creates the first
+    school assignment (school, job title, start date).
 
-    - Django Super Users and Admins group: can assign any school-level group including Admins
-    - System Admins group: can assign school-level groups except Admins
+    - Django Super Users and Admins group: any school, any school-level group
+      including Admins
+    - System Admins group: any school, school-level groups except Admins
+    - School Admins group: only their own active schools, only the Teachers
+      and School Staff groups (defaults to their school when they have one)
+
+    The staff type is derived from the groups: Teachers means teaching staff,
+    anything else means non-teaching staff (see staff_type()).
     """
 
-    staff_type = forms.ChoiceField(
-        label="Staff type",
-        choices=SchoolStaff.STAFF_TYPE_CHOICES,
-        initial=SchoolStaff.NON_TEACHING_STAFF,
-        widget=forms.Select(attrs={"class": "form-select form-select-sm"}),
-    )
+    GROUP_DESCRIPTIONS = {
+        "Admins": "Full system access",
+        "School Admins": "Manage staff and students at their schools",
+        "Teachers": "Teaching staff. Can add and edit students at their schools",
+        "School Staff": "Non-teaching staff. Read-only access at their schools",
+    }
 
     groups = forms.ModelMultipleChoiceField(
         label="Groups",
@@ -385,15 +393,44 @@ class AssignSchoolStaffForm(forms.Form):
         help_text="Select at least one group to assign permissions.",
     )
 
+    school = forms.ModelChoiceField(
+        label="School",
+        queryset=EmisSchool.objects.none(),
+        widget=forms.Select(attrs={"class": "form-select form-select-sm"}),
+    )
+
+    job_title = forms.ModelChoiceField(
+        label="Job title",
+        queryset=EmisJobTitle.objects.filter(active=True).order_by("label"),
+        widget=forms.Select(attrs={"class": "form-select form-select-sm"}),
+    )
+
+    start_date = forms.DateField(
+        label="Start date",
+        widget=forms.DateInput(
+            attrs={"type": "date", "class": "form-control form-control-sm"}
+        ),
+    )
+
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
 
         # Determine available groups based on user permissions
         # Superusers and Admins can assign any school-level group including Admins
         # System Admins can assign school-level groups except Admins
+        # School Admins can only assign Teachers and School Staff
         self.can_assign_admins = can_assign_admins_group(user) if user else False
+        self.is_school_admin_only = bool(
+            user
+            and user.is_authenticated
+            and not user.is_superuser
+            and not is_admin(user)
+            and is_school_admin(user)
+        )
 
-        if self.can_assign_admins:
+        if self.is_school_admin_only:
+            school_groups = ["School Staff", "Teachers"]
+        elif self.can_assign_admins:
             school_groups = ["Admins", "School Admins", "School Staff", "Teachers"]
         else:
             # System Admins cannot assign the Admins group
@@ -402,11 +439,57 @@ class AssignSchoolStaffForm(forms.Form):
         self.fields["groups"].queryset = Group.objects.filter(
             name__in=school_groups
         ).order_by("name")
+        self.fields["groups"].initial = list(
+            Group.objects.filter(name="Teachers").values_list("pk", flat=True)
+        )
 
-        if not self.can_assign_admins:
+        if self.is_school_admin_only:
+            self.fields["groups"].help_text = (
+                "Most people you on-board are Teachers. Pick School Staff only "
+                "for non-teaching staff."
+            )
+        elif not self.can_assign_admins:
             self.fields["groups"].help_text = (
                 "Select at least one group. Note: Only full Admins can assign the Admins group."
             )
+
+        # Restrict school choices: system-wide roles see all active schools,
+        # School Admins only their own active schools (preselected when one).
+        if self.is_school_admin_only:
+            schools = get_user_schools(user).order_by("emis_school_name")
+            self.fields["school"].queryset = schools
+            self.fields["school"].empty_label = None
+            if schools.count() == 1:
+                self.fields["school"].initial = schools.first().pk
+        elif user and user.is_authenticated:
+            self.fields["school"].queryset = EmisSchool.objects.filter(
+                active=True
+            ).order_by("emis_school_name")
+
+        self.fields["start_date"].initial = timezone.now().date()
+
+    def clean_groups(self):
+        """Teachers (teaching) and School Staff (non-teaching) are mutually exclusive."""
+        groups = self.cleaned_data["groups"]
+        names = {g.name for g in groups}
+        if {"Teachers", "School Staff"} <= names:
+            raise forms.ValidationError(
+                "Pick either Teachers (teaching staff) or School Staff "
+                "(non-teaching staff), not both."
+            )
+        return groups
+
+    def staff_type(self) -> str:
+        """Teaching staff when the Teachers group is selected, otherwise non-teaching."""
+        groups = self.cleaned_data.get("groups") or []
+        if any(g.name == "Teachers" for g in groups):
+            return SchoolStaff.TEACHING_STAFF
+        return SchoolStaff.NON_TEACHING_STAFF
+
+    def group_choices_with_descriptions(self):
+        """Yield (checkbox, description) pairs for the template."""
+        for choice in self["groups"]:
+            yield choice, self.GROUP_DESCRIPTIONS.get(choice.choice_label, "")
 
 
 class AssignSystemUserForm(forms.Form):
