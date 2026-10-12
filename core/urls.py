@@ -71,6 +71,11 @@ urlpatterns = [
         views.delete_pending_user,
         name="delete_pending_user",
     ),
+    path(
+        "users/<int:user_id>/reset-to-pending/",
+        views.reset_user_to_pending,
+        name="reset_user_to_pending",
+    ),
 
     # Settings (EMIS lookups sync and review)
     path("settings/", views.admin_settings, name="settings"),

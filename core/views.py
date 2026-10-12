@@ -63,6 +63,8 @@ from core.permissions import (
     is_system_staff,
     can_edit_system_user,
     can_edit_system_user_groups,
+    can_reset_user_to_pending,
+    can_force_reset_user_to_pending,
     get_user_schools,
     GROUP_ADMINS,
     GROUP_SYSTEM_ADMINS,
@@ -407,6 +409,7 @@ def staff_detail(request, pk):
         "assignment_form": assignment_form,
         "can_add_assignment": can_add_assignment,
         "can_edit": can_edit_staff(request.user, staff),
+        "can_reset": _can_reset_target(request.user, user_obj),
         "assignment_permissions": assignment_permissions,
         "group_permissions": group_permissions,
         "direct_permission_sections": direct_permission_sections,
@@ -726,6 +729,7 @@ def system_user_detail(request, pk):
         "group_permissions": group_permissions,
         "direct_permission_sections": direct_permission_sections,
         "can_edit": can_edit_system_user(request.user, system_user),
+        "can_reset": _can_reset_target(request.user, user_obj),
     }
     return render(request, "core/system_user_detail.html", context)
 
@@ -2208,6 +2212,143 @@ def delete_pending_user(request, user_id):
         {
             "active": "pending_users",
             "target_user": target_user,
+        },
+    )
+
+
+def _can_reset_target(actor, target_user) -> bool:
+    """Show the reset-to-pending action for this target? Never for oneself or a superuser."""
+    return (
+        can_reset_user_to_pending(actor)
+        and actor.pk != target_user.pk
+        and not target_user.is_superuser
+    )
+
+
+def user_audit_footprint(user):
+    """
+    Records that name this user as creator or last editor, excluding the
+    user's own profile and school assignments (which a reset removes).
+
+    Returns a list of (label, count) with zero counts left out. These
+    records are kept by a reset; they stay attributed to the user account.
+    """
+    by_user = Q(created_by=user) | Q(last_updated_by=user)
+    sources = [
+        ("Students", Student.objects.filter(by_user)),
+        ("Student enrolments", StudentSchoolEnrolment.objects.filter(by_user)),
+        ("School staff profiles", SchoolStaff.objects.filter(by_user).exclude(user=user)),
+        (
+            "School staff assignments",
+            SchoolStaffAssignment.objects.filter(by_user).exclude(school_staff__user=user),
+        ),
+        ("System user profiles", SystemUser.objects.filter(by_user).exclude(user=user)),
+    ]
+    footprint = []
+    for label, qs in sources:
+        count = qs.count()
+        if count:
+            footprint.append((label, count))
+    return footprint
+
+
+@login_required
+def reset_user_to_pending(request, user_id):
+    """
+    Put an on-boarded user back into the Pending Users list.
+
+    Removes the SchoolStaff or SystemUser profile, its school assignments
+    and all group memberships. The User row (and its linked Google account)
+    is kept, so the person reappears as pending at once and every record
+    they created or edited stays attributed to them.
+
+    - Admins and superusers may reset a user with no audit footprint.
+    - Only superusers may force a reset when a footprint exists, and must
+      tick the acknowledgement on the confirm page.
+    - Nobody can reset themself or a superuser.
+    """
+    if not can_reset_user_to_pending(request.user):
+        raise PermissionDenied
+
+    target_user = get_object_or_404(User, pk=user_id)
+    staff = getattr(target_user, "school_staff", None)
+    system_user = getattr(target_user, "system_user", None)
+
+    if staff is not None:
+        back_url = reverse("core:staff_detail", kwargs={"pk": staff.pk})
+    elif system_user is not None:
+        back_url = reverse("core:system_user_detail", kwargs={"pk": system_user.pk})
+    else:
+        messages.info(request, f"{target_user} is already a pending user.")
+        return redirect("core:pending_users_list")
+
+    if target_user.pk == request.user.pk:
+        messages.error(request, "You cannot reset your own account.")
+        return redirect(back_url)
+    if target_user.is_superuser:
+        messages.error(request, "Superusers cannot be reset from here. Use the Django admin.")
+        return redirect(back_url)
+
+    footprint = user_audit_footprint(target_user)
+    has_footprint = bool(footprint)
+    can_force = can_force_reset_user_to_pending(request.user)
+    assignments = (
+        list(staff.assignments.select_related("school", "job_title").order_by("start_date"))
+        if staff is not None
+        else []
+    )
+    group_names = list(target_user.groups.order_by("name").values_list("name", flat=True))
+    full_name = target_user.get_full_name() or target_user.username
+    acknowledge_error = False
+
+    if request.method == "POST":
+        if has_footprint and not can_force:
+            raise PermissionDenied
+        if has_footprint and request.POST.get("acknowledge") != "yes":
+            acknowledge_error = True
+        else:
+            with transaction.atomic():
+                if staff is not None:
+                    staff.delete()  # cascades to its school assignments
+                if system_user is not None:
+                    system_user.delete()
+                target_user.groups.clear()
+
+            logger.warning(
+                "User %s (%s) reset %s (%s) to pending: profile=%s, assignments=%d, "
+                "groups=%s, kept records=%s",
+                request.user.username,
+                request.user.pk,
+                target_user.username,
+                target_user.pk,
+                "school_staff" if staff is not None else "system_user",
+                len(assignments),
+                group_names,
+                footprint,
+            )
+            messages.success(
+                request,
+                f"{full_name} has been reset to pending. Their profile, "
+                f"{len(assignments)} school assignment{'s' if len(assignments) != 1 else ''} "
+                f"and {len(group_names)} group{'s' if len(group_names) != 1 else ''} were removed.",
+            )
+            return redirect("core:pending_users_list")
+
+    return render(
+        request,
+        "core/reset_user_to_pending.html",
+        {
+            "active": "staff" if staff is not None else "system_users",
+            "target_user": target_user,
+            "full_name": full_name,
+            "profile_kind": "School Staff" if staff is not None else "System User",
+            "assignments": assignments,
+            "group_names": group_names,
+            "footprint": footprint,
+            "has_footprint": has_footprint,
+            "can_force": can_force,
+            "acknowledge_error": acknowledge_error,
+            "back_url": back_url,
         },
     )
 

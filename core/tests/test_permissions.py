@@ -125,6 +125,8 @@ class TestRoleHelpers:
             perms.can_create_student,
             perms.can_manage_pending_users,
             perms.can_onboard_school_staff,
+            perms.can_reset_user_to_pending,
+            perms.can_force_reset_user_to_pending,
             perms.can_assign_admins_group,
         ],
     )
@@ -546,6 +548,15 @@ class TestSystemUserPermissions:
             end_date=dt.date.today() - dt.timedelta(days=1)
         )
         assert perms.can_onboard_school_staff(school_admin_user) is False
+
+    @pytest.mark.parametrize("role,expected", expect({"superuser", "admin_user"}))
+    def test_can_reset_user_to_pending(self, request, role, expected):
+        assert perms.can_reset_user_to_pending(request.getfixturevalue(role)) is expected
+
+    @pytest.mark.parametrize("role,expected", expect({"superuser"}))
+    def test_can_force_reset_user_to_pending(self, request, role, expected):
+        """Only superusers may reset a user who still has an audit footprint."""
+        assert perms.can_force_reset_user_to_pending(request.getfixturevalue(role)) is expected
 
     @pytest.mark.parametrize("role,expected", expect({"superuser", "admin_user"}))
     def test_can_assign_admins_group(self, request, role, expected):

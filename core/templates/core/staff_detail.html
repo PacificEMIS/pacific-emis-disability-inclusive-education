@@ -23,6 +23,11 @@
         <a href="{% url 'core:staff_edit' staff.pk %}"
            class="btn btn-sm btn-outline-primary">Edit</a>
       {% endif %}
+      {% if can_reset %}
+        <a href="{% url 'core:reset_user_to_pending' staff.user.pk %}"
+           class="btn btn-sm btn-outline-danger"
+           title="Remove profile, assignments and groups; the user returns to Pending Users">Reset to pending</a>
+      {% endif %}
     </div>
   </div>
   {# FIRST ROW: Profile + Permissions #}

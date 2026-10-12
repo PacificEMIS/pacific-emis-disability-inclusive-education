@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Reset to pending — {{ full_name }}{% endblock title %}
+{% block content %}
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <div>
+      <h1 class="h4 mb-0">Reset user to pending</h1>
+      <div class="small text-body-secondary">
+        For: {{ full_name }} ({{ target_user.username }}{% if target_user.email %}, {{ target_user.email }}{% endif %})
+      </div>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{{ back_url }}" class="btn btn-sm btn-outline-secondary">← Back</a>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-12 col-lg-8">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <p>
+            This puts <strong>{{ full_name }}</strong> back into the Pending Users list,
+            exactly as they were right after their first sign-in. They can then be
+            on-boarded again from scratch.
+          </p>
+
+          <h2 class="h6 mt-3">What will be removed</h2>
+          <ul class="small mb-3">
+            <li>Their <strong>{{ profile_kind }}</strong> profile.</li>
+            <li>
+              {{ assignments|length }} school assignment{{ assignments|length|pluralize }}
+              {% if assignments %}
+                <ul class="text-body-secondary mb-0">
+                  {% for a in assignments %}
+                    <li>
+                      {{ a.school.emis_school_name }} ({{ a.school.emis_school_no }}),
+                      {{ a.job_title.label }},
+                      from {{ a.start_date|date:"Y-m-d"|default:"—" }}
+                      to {{ a.end_date|date:"Y-m-d"|default:"open-ended" }}
+                    </li>
+                  {% endfor %}
+                </ul>
+              {% endif %}
+            </li>
+            <li>
+              {{ group_names|length }} group{{ group_names|length|pluralize }}{% if group_names %}: {{ group_names|join:", " }}{% endif %}
+            </li>
+          </ul>
+
+          <h2 class="h6 mt-3">What will be kept</h2>
+          <p class="small mb-2">
+            The user account and its Google sign-in stay, so the person reappears
+            under Pending Users immediately.
+            {% if has_footprint %}
+              The records below were created or last edited by this user. They are
+              <strong>not</strong> deleted and remain attributed to this account.
+            {% else %}
+              No students, enrolments, profiles or assignments name this user as
+              creator or last editor.
+            {% endif %}
+          </p>
+          {% if has_footprint %}
+            <table class="table table-sm w-auto small mb-3">
+              <tbody>
+                {% for label, count in footprint %}
+                  <tr>
+                    <th scope="row" class="fw-normal pe-4">{{ label }}</th>
+                    <td class="text-end">{{ count }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          {% endif %}
+
+          {% if has_footprint and not can_force %}
+            <div class="alert alert-warning small">
+              <i class="bi bi-exclamation-triangle me-1"></i>
+              This user has a history in the system, so only a superuser can reset
+              them. Alternatively, end their school assignments and remove their
+              groups from the staff page to lock them out while keeping everything.
+            </div>
+            <a href="{{ back_url }}" class="btn btn-sm btn-outline-secondary">Back</a>
+          {% else %}
+            <form method="post" id="reset-form">
+              {% csrf_token %}
+              {% if has_footprint %}
+                <div class="form-check mb-3">
+                  <input class="form-check-input" type="checkbox" name="acknowledge" value="yes" id="acknowledge">
+                  <label class="form-check-label small" for="acknowledge">
+                    I understand this account keeps its history but loses its
+                    profile, school assignments and groups.
+                  </label>
+                  {% if acknowledge_error %}
+                    <div class="invalid-feedback d-block">Tick the box to confirm the reset.</div>
+                  {% endif %}
+                </div>
+              {% endif %}
+              <div class="d-flex justify-content-between">
+                <a href="{{ back_url }}" class="btn btn-sm btn-outline-secondary">Cancel</a>
+                <button type="submit" class="btn btn-sm btn-danger" id="reset-submit"
+                        {% if has_footprint %}disabled{% endif %}>
+                  Yes, reset to pending
+                </button>
+              </div>
+            </form>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+(function () {
+  var box = document.getElementById('acknowledge');
+  var btn = document.getElementById('reset-submit');
+  if (!box || !btn) return;
+  box.addEventListener('change', function () { btn.disabled = !box.checked; });
+})();
+</script>
+{% endblock extra_js %}

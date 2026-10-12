@@ -83,6 +83,7 @@ CORE_URLS = [
     ("assign_school_staff", lambda o: {"user_id": o["pending"].pk}, 200),
     ("assign_system_user", lambda o: {"user_id": o["pending"].pk}, 200),
     ("delete_pending_user", lambda o: {"user_id": o["pending"].pk}, 200),
+    ("reset_user_to_pending", lambda o: {"user_id": o["staff"].user.pk}, 200),
     ("settings", lambda o: {}, 200),
     ("sync_emis_lookups", lambda o: {}, 302),  # POST-only; GET redirects
     ("settings_lookup_list", lambda o: {"slug": "schools"}, 200),
