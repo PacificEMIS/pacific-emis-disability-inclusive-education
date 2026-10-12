@@ -1,15 +1,17 @@
 {% extends "base.html" %}
-{% block title %}Edit assignment — {{ staff.user.get_full_name|default:staff.user.username }}{% endblock title %}
+{% block title %}
+    {% if assignment %}Edit assignment{% else %}Add assignment{% endif %} — {{ staff.user.get_full_name|default:staff.user.username }}
+{% endblock title %}
 {% block content %}
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
         <div>
-            <h1 class="h4 mb-0">Edit school assignment</h1>
+            <h1 class="h4 mb-0">{% if assignment %}Edit school assignment{% else %}Add school assignment{% endif %}</h1>
             <div class="small text-body-secondary">
                 For:
                 {% if staff.user.first_name or staff.user.last_name %}
                     {{ staff.user.first_name }} {{ staff.user.last_name }}
                 {% else %}
-                    {{ staff.user.username %}
+                    {{ staff.user.username }}
                 {% endif %}
             </div>
         </div>
@@ -53,11 +55,19 @@
                     {% if form.end_date.errors %}
                         <div class="invalid-feedback d-block">{{ form.end_date.errors|striptags }}</div>
                     {% endif %}
+                    <div class="form-text">Leave empty for an open-ended assignment.</div>
                 </div>
+                {% if form.non_field_errors %}
+                    <div class="col-12">
+                        <div class="invalid-feedback d-block">{{ form.non_field_errors|striptags }}</div>
+                    </div>
+                {% endif %}
                 <div class="col-12 d-flex justify-content-between mt-3">
                     <a href="{% url 'core:staff_detail' staff.pk %}"
                        class="btn btn-sm btn-outline-secondary">Cancel</a>
-                    <button type="submit" class="btn btn-sm btn-primary">Save changes</button>
+                    <button type="submit" class="btn btn-sm btn-primary">
+                        {% if assignment %}Save changes{% else %}Add assignment{% endif %}
+                    </button>
                 </div>
             </form>
         </div>

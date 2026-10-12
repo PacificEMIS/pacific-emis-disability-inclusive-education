@@ -14,8 +14,21 @@ from integrations.emis_client import EmisClient
 LAST_SYNC_CACHE_KEY = "emis_lookups_last_sync"
 
 
+def _int_or_none(value):
+    """YoEd comes as an int, but be tolerant of strings and blanks."""
+    if value is None or value == "":
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
 class Command(BaseCommand):
     help = "Fetch /api/lookups/collection/core and update local schools & class levels"
+
+    # The active flag is a local override set on the Settings page. The sync
+    # only sets it on newly created rows and never touches it afterwards.
 
     def handle(self, *args, **options):
         client = EmisClient()
@@ -44,7 +57,8 @@ class Command(BaseCommand):
                     continue
                 obj, created = EmisSchool.objects.update_or_create(
                     emis_school_no=code,
-                    defaults={"emis_school_name": name or "", "active": True},
+                    defaults={"emis_school_name": name or ""},
+                    create_defaults={"emis_school_name": name or "", "active": True},
                 )
                 added_sch += int(created)
                 updated_sch += int(not created)
@@ -54,9 +68,14 @@ class Command(BaseCommand):
                 code, label = item.get("C"), item.get("N")
                 if not code:
                     continue
+                level_fields = {
+                    "label": label or str(code),
+                    "year_of_education": _int_or_none(item.get("YoEd")),
+                }
                 obj, created = EmisClassLevel.objects.update_or_create(
                     code=str(code),
-                    defaults={"label": label or str(code), "active": True},
+                    defaults=level_fields,
+                    create_defaults={**level_fields, "active": True},
                 )
                 added_lvl += int(created)
                 updated_lvl += int(not created)
@@ -68,7 +87,8 @@ class Command(BaseCommand):
                     continue
                 obj, created = EmisJobTitle.objects.update_or_create(
                     code=str(code),
-                    defaults={"label": label or str(code), "active": True},
+                    defaults={"label": label or str(code)},
+                    create_defaults={"label": label or str(code), "active": True},
                 )
                 added_title += int(created)
                 updated_title += int(not created)
@@ -80,7 +100,8 @@ class Command(BaseCommand):
                     continue
                 obj, created = EmisWarehouseYear.objects.update_or_create(
                     code=str(code),
-                    defaults={"label": label or str(code), "active": True},
+                    defaults={"label": label or str(code)},
+                    create_defaults={"label": label or str(code), "active": True},
                 )
                 added_year += int(created)
                 updated_year += int(not created)

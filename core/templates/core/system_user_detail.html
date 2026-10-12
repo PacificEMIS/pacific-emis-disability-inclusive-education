@@ -10,11 +10,18 @@
         <li class="breadcrumb-item active" aria-current="page">{{ system_user.user.get_full_name|default:system_user.user.username }}</li>
       </ol>
     </nav>
-    {% if can_edit %}
-      <a href="{% url 'core:system_user_edit' system_user.pk %}" class="btn btn-sm btn-outline-primary">
-        Edit
-      </a>
-    {% endif %}
+    <div class="d-flex gap-2">
+      {% if can_edit %}
+        <a href="{% url 'core:system_user_edit' system_user.pk %}" class="btn btn-sm btn-outline-primary">
+          Edit
+        </a>
+      {% endif %}
+      {% if can_reset %}
+        <a href="{% url 'core:reset_user_to_pending' system_user.user.pk %}"
+           class="btn btn-sm btn-outline-danger"
+           title="Remove profile and groups; the user returns to Pending Users">Reset to pending</a>
+      {% endif %}
+    </div>
   </div>
   {# FIRST ROW: Profile + Permissions #}
   <div class="row g-3">

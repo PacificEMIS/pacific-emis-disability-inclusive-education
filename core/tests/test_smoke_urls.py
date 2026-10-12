@@ -50,6 +50,7 @@ CORE_URLS = [
     ("staff_list", lambda o: {}, 200),
     ("staff_detail", lambda o: {"pk": o["staff"].pk}, 200),
     ("staff_edit", lambda o: {"pk": o["staff"].pk}, 200),
+    ("staff_assignment_add", lambda o: {"staff_id": o["staff"].pk}, 200),
     (
         "staff_assignment_edit",
         lambda o: {"staff_id": o["staff"].pk, "pk": o["assignment"].pk},
@@ -83,6 +84,7 @@ CORE_URLS = [
     ("assign_school_staff", lambda o: {"user_id": o["pending"].pk}, 200),
     ("assign_system_user", lambda o: {"user_id": o["pending"].pk}, 200),
     ("delete_pending_user", lambda o: {"user_id": o["pending"].pk}, 200),
+    ("reset_user_to_pending", lambda o: {"user_id": o["staff"].user.pk}, 200),
     ("settings", lambda o: {}, 200),
     ("sync_emis_lookups", lambda o: {}, 302),  # POST-only; GET redirects
     ("settings_lookup_list", lambda o: {"slug": "schools"}, 200),

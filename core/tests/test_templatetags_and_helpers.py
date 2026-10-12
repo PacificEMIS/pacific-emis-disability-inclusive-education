@@ -161,6 +161,7 @@ class TestStaffContext:
             "user_profile_url": None,
             "is_admin_user": False,
             "can_manage_pending_users": False,
+            "can_onboard_school_staff": False,
             "is_system_level_user": False,
         }
 
@@ -171,6 +172,12 @@ class TestStaffContext:
         assert ctx["user_profile_url"] == reverse("core:staff_detail", kwargs={"pk": staff.pk})
         assert ctx["is_admin_user"] is False
         assert ctx["is_system_level_user"] is False
+        assert ctx["can_onboard_school_staff"] is False
+
+    def test_school_admin_can_onboard_but_not_manage(self, school_admin_user):
+        ctx = staff_context(_request(school_admin_user))
+        assert ctx["can_manage_pending_users"] is False
+        assert ctx["can_onboard_school_staff"] is True
 
     def test_system_user_profile(self, system_admin_user):
         ctx = staff_context(_request(system_admin_user))
@@ -179,6 +186,7 @@ class TestStaffContext:
         assert ctx["user_profile_url"] == reverse("core:system_user_detail", kwargs={"pk": su.pk})
         assert ctx["is_admin_user"] is True
         assert ctx["can_manage_pending_users"] is True
+        assert ctx["can_onboard_school_staff"] is True
         assert ctx["is_system_level_user"] is True
 
     def test_superuser_without_profile_links_to_admin(self, superuser):

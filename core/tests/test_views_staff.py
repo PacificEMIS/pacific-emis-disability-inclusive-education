@@ -104,7 +104,7 @@ class TestStaffList:
 
 
 # ============================================================================
-# staff_detail (view + add assignment)
+# staff_detail (read-only hub)
 # ============================================================================
 
 
@@ -122,15 +122,19 @@ class TestStaffDetail:
         response = client_for(teacher_user).get(self.url(staff_set["a"]))
         assert response.status_code == 200
         assert response.context["can_add_assignment"] is False
-        assert response.context["assignment_form"] is None
         assert response.context["can_edit"] is False
+        html = response.content.decode()
+        assert reverse("core:staff_assignment_add", kwargs={"staff_id": staff_set["a"].pk}) not in html
+        assert reverse("core:staff_edit", kwargs={"pk": staff_set["a"].pk}) not in html
 
-    def test_admin_sees_form_and_permissions(self, client_for, admin_user, staff_set):
+    def test_admin_sees_actions_and_permissions(self, client_for, admin_user, staff_set):
         response = client_for(admin_user).get(self.url(staff_set["a"]))
         ctx = response.context
         assert ctx["can_add_assignment"] is True
-        assert ctx["assignment_form"] is not None
         assert ctx["can_edit"] is True
+        html = response.content.decode()
+        assert reverse("core:staff_assignment_add", kwargs={"staff_id": staff_set["a"].pk}) in html
+        assert "Edit groups" in html
         assignment = staff_set["a"].assignments.first()
         assert ctx["assignment_permissions"][assignment.pk] == {"can_edit": True, "can_delete": True}
 
@@ -144,6 +148,31 @@ class TestStaffDetail:
     def test_unknown_staff_404(self, client_for, superuser):
         assert client_for(superuser).get(reverse("core:staff_detail", kwargs={"pk": 999999})).status_code == 404
 
+    def test_post_to_detail_does_not_create_anything(self, client_for, admin_user, staff_set, school_b, job_title):
+        """The detail page is read-only; adding goes through staff_assignment_add."""
+        staff = staff_set["none"]
+        response = client_for(admin_user).post(
+            self.url(staff), {"school": school_b.pk, "job_title": job_title.pk, "start_date": "2026-01-01"}
+        )
+        assert response.status_code == 200
+        assert staff.assignments.count() == 0
+
+
+# ============================================================================
+# staff_assignment_add
+# ============================================================================
+
+
+class TestStaffAssignmentAdd:
+    def url(self, staff):
+        return reverse("core:staff_assignment_add", kwargs={"staff_id": staff.pk})
+
+    def test_admin_sees_add_page(self, client_for, admin_user, staff_set):
+        response = client_for(admin_user).get(self.url(staff_set["none"]))
+        assert response.status_code == 200
+        assert response.context["assignment"] is None
+        assert "Add school assignment" in response.content.decode()
+
     def test_admin_adds_assignment(self, client_for, admin_user, staff_set, school_b, job_title):
         staff = staff_set["none"]
         response = client_for(admin_user).post(
@@ -151,6 +180,7 @@ class TestStaffDetail:
             {"school": school_b.pk, "job_title": job_title.pk, "start_date": "2026-01-01", "end_date": ""},
         )
         assert response.status_code == 302
+        assert response["Location"] == reverse("core:staff_detail", kwargs={"pk": staff.pk})
         a = staff.assignments.get()
         assert a.school == school_b and a.start_date == dt.date(2026, 1, 1)
         assert a.created_by == admin_user and a.last_updated_by == admin_user
@@ -161,7 +191,7 @@ class TestStaffDetail:
             self.url(staff), {"school": school_a.pk, "job_title": job_title.pk, "start_date": "", "end_date": ""}
         )
         assert response.status_code == 200
-        assert "school" in response.context["assignment_form"].errors
+        assert "school" in response.context["form"].errors
         assert staff.assignments.count() == 1
 
     def test_school_admin_cannot_add_assignment_for_other_school(
@@ -172,6 +202,7 @@ class TestStaffDetail:
             self.url(staff), {"school": school_b.pk, "job_title": job_title.pk, "start_date": "", "end_date": ""}
         )
         assert response.status_code == 200
+        assert "school" in response.context["form"].errors
         assert staff.assignments.filter(school=school_b).count() == 0
 
     def test_school_admin_adds_assignment_at_own_school(
@@ -185,14 +216,26 @@ class TestStaffDetail:
         assert response.status_code == 302
         assert staff.assignments.count() == 2
 
-    def test_teacher_post_is_refused(self, client_for, teacher_user, staff_set, school_a, job_title):
+    def test_school_admin_cannot_reach_staff_at_other_school(self, client_for, school_admin_user, staff_set):
+        response = client_for(school_admin_user).get(self.url(staff_set["b"]))
+        assert response.status_code == 302
+        assert response["Location"] == reverse("core:staff_list")
+
+    def test_teacher_is_refused(self, client_for, teacher_user, staff_set, school_a, job_title):
         staff = staff_set["a"]
-        response = client_for(teacher_user).post(
+        client = client_for(teacher_user)
+        response = client.get(self.url(staff))
+        assert response.status_code == 302
+        assert response["Location"] == reverse("core:staff_detail", kwargs={"pk": staff.pk})
+        response = client.post(
             self.url(staff), {"school": school_a.pk, "job_title": job_title.pk, "start_date": "2026-02-01", "end_date": ""}
         )
-        assert response.status_code == 200
+        assert response.status_code == 302
         assert staff.assignments.count() == 1
         assert any("permission" in m for m in messages_of(response))
+
+    def test_unknown_staff_404(self, client_for, superuser):
+        assert client_for(superuser).get(reverse("core:staff_assignment_add", kwargs={"staff_id": 999999})).status_code == 404
 
 
 # ============================================================================
@@ -269,23 +312,46 @@ class TestStaffEdit:
     def url(self, staff):
         return reverse("core:staff_edit", kwargs={"pk": staff.pk})
 
-    def _post(self, client, staff, groups, staff_type="teaching"):
+    def _post(self, client, staff, groups):
         ids = [Group.objects.get(name=g).pk for g in groups]
-        return client.post(self.url(staff), {"staff_type": staff_type, "groups": ids})
+        return client.post(self.url(staff), {"groups": ids})
 
     def test_teacher_cannot_edit(self, client_for, teacher_user, staff_set):
         response = client_for(teacher_user).get(self.url(staff_set["a"]))
         assert response.status_code == 302
         assert response["Location"] == reverse("core:staff_detail", kwargs={"pk": staff_set["a"].pk})
 
-    def test_admin_changes_type_and_groups(self, client_for, admin_user, teacher_user):
+    def test_admin_changes_groups_and_type_follows(self, client_for, admin_user, teacher_user):
         staff = teacher_user.school_staff
-        response = self._post(client_for(admin_user), staff, ["School Admins", "School Staff"], "non_teaching")
+        assert staff.staff_type == "teaching"
+        response = self._post(client_for(admin_user), staff, ["School Admins", "School Staff"])
         assert response.status_code == 302
         staff.refresh_from_db()
         assert staff.staff_type == "non_teaching"
         assert staff.last_updated_by == admin_user
         assert set(teacher_user.groups.values_list("name", flat=True)) == {"School Admins", "School Staff"}
+
+    def test_type_becomes_teaching_with_teachers_group(self, client_for, admin_user, school_staff_user):
+        staff = school_staff_user.school_staff
+        self._post(client_for(admin_user), staff, ["Teachers", "School Admins"])
+        staff.refresh_from_db()
+        assert staff.staff_type == "teaching"
+
+    def test_teachers_and_school_staff_together_rejected(self, client_for, admin_user, teacher_user):
+        response = self._post(client_for(admin_user), teacher_user.school_staff, ["Teachers", "School Staff"])
+        assert response.status_code == 200
+        assert "groups" in response.context["form"].errors
+        assert list(teacher_user.groups.values_list("name", flat=True)) == ["Teachers"]
+
+    def test_type_follows_actual_groups_even_when_editor_cannot_grant_admins(
+        self, client_for, school_admin_user, school_a, make_school_user
+    ):
+        """A limited editor's save still derives the type from the groups the user ends up with."""
+        target = make_school_user("Admins", schools=[school_a], username="target-admin")
+        self._post(client_for(school_admin_user), target.school_staff, ["Teachers"])
+        target.school_staff.refresh_from_db()
+        assert set(target.groups.values_list("name", flat=True)) == {"Admins", "Teachers"}
+        assert target.school_staff.staff_type == "teaching"
 
     def test_admin_can_grant_admins(self, client_for, admin_user, teacher_user):
         self._post(client_for(admin_user), teacher_user.school_staff, ["Admins"])

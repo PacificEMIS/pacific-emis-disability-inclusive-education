@@ -18,10 +18,14 @@ class EmisClassLevel(models.Model):
         max_length=16, primary_key=True
     )  # from core.lookups.levels.C
     label = models.CharField(max_length=128)  # from core.lookups.levels.N
+    # Year of education, from core.lookups.levels.YoEd (EMIS lvlYear).
+    # ECE years are negative or zero, primary counts up from 1. Used for
+    # ordering everywhere; null sorts last.
+    year_of_education = models.IntegerField(null=True, blank=True)
     active = models.BooleanField(default=True)
 
     class Meta:
-        ordering = ["code"]
+        ordering = ["year_of_education", "code"]
 
     def __str__(self):
         return f"{self.code} — {self.label}"

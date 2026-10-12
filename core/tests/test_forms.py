@@ -44,6 +44,10 @@ def group_names(form):
     return list(form.fields["groups"].queryset.values_list("name", flat=True))
 
 
+def gpk(name):
+    return Group.objects.get(name=name).pk
+
+
 # ============================================================================
 # SchoolStaffAssignmentForm
 # ============================================================================
@@ -175,8 +179,33 @@ class TestSchoolStaffEditForm:
     def test_initial_values_come_from_staff(self, superuser, teacher_user):
         staff = teacher_user.school_staff
         form = SchoolStaffEditForm(user=superuser, school_staff=staff)
-        assert form.initial["staff_type"] == staff.staff_type
+        assert "staff_type" not in form.fields  # derived from groups, never chosen
         assert list(form.initial["groups"].values_list("name", flat=True)) == ["Teachers"]
+
+    def test_teachers_and_school_staff_are_mutually_exclusive(self, superuser, teacher_user):
+        form = SchoolStaffEditForm(
+            {"groups": [gpk("Teachers"), gpk("School Staff")]},
+            user=superuser,
+            school_staff=teacher_user.school_staff,
+        )
+        assert not form.is_valid()
+        assert "not both" in form.errors["groups"][0]
+
+    @pytest.mark.parametrize(
+        "names,expected",
+        [(["Teachers"], "teaching"), (["Teachers", "Admins"], "teaching"), (["School Staff"], "non_teaching")],
+    )
+    def test_staff_type_is_derived_from_groups(self, superuser, teacher_user, names, expected):
+        form = SchoolStaffEditForm(
+            {"groups": [gpk(n) for n in names]}, user=superuser, school_staff=teacher_user.school_staff
+        )
+        assert form.is_valid(), form.errors
+        assert form.staff_type() == expected
+
+    def test_group_choices_carry_descriptions(self, superuser):
+        form = SchoolStaffEditForm(user=superuser)
+        pairs = dict((c.choice_label, d) for c, d in form.group_choices_with_descriptions())
+        assert pairs == SchoolStaffEditForm.GROUP_DESCRIPTIONS
 
     def test_initial_groups_hide_admins_from_limited_editor(self, school_admin_user, admin_user):
         form = SchoolStaffEditForm(user=school_admin_user, school_staff=admin_user.school_staff)
@@ -185,7 +214,7 @@ class TestSchoolStaffEditForm:
     def test_posting_admins_group_as_system_admin_is_rejected(self, system_admin_user, teacher_user):
         admins = Group.objects.get(name="Admins")
         form = SchoolStaffEditForm(
-            {"staff_type": "teaching", "groups": [admins.pk]},
+            {"groups": [admins.pk]},
             user=system_admin_user,
             school_staff=teacher_user.school_staff,
         )
@@ -194,7 +223,7 @@ class TestSchoolStaffEditForm:
 
     def test_at_least_one_group_required(self, superuser, teacher_user):
         form = SchoolStaffEditForm(
-            {"staff_type": "teaching", "groups": []},
+            {"groups": []},
             user=superuser,
             school_staff=teacher_user.school_staff,
         )
@@ -358,11 +387,91 @@ class TestAssignForms:
         admins = Group.objects.get(name="Admins")
         form = AssignSystemUserForm({"groups": [admins.pk]}, user=system_admin_user)
         assert not form.is_valid()
-        form = AssignSchoolStaffForm({"staff_type": "teaching", "groups": [admins.pk]}, user=system_admin_user)
-        assert not form.is_valid()
+        form = AssignSchoolStaffForm({"groups": [admins.pk]}, user=system_admin_user)
+        assert "groups" in form.errors
 
-    def test_assign_school_staff_defaults_to_non_teaching(self):
-        assert AssignSchoolStaffForm().fields["staff_type"].initial == "non_teaching"
+    def test_assign_school_staff_defaults(self, superuser, school_a):
+        form = AssignSchoolStaffForm(user=superuser)
+        assert form.fields["groups"].initial == [gpk("Teachers")]
+        assert form.fields["start_date"].initial == dt.date.today()
+        assert list(form.fields["school"].queryset) == [school_a]
+        assert form.is_school_admin_only is False
+
+    def test_school_admin_sees_only_teachers_and_school_staff_at_own_school(
+        self, school_admin_user, school_a, school_b
+    ):
+        form = AssignSchoolStaffForm(user=school_admin_user)
+        assert form.is_school_admin_only is True
+        assert group_names(form) == ["School Staff", "Teachers"]
+        assert list(form.fields["school"].queryset) == [school_a]
+        assert form.fields["school"].initial == school_a.pk
+        assert form.fields["school"].empty_label is None
+
+    def test_school_admin_with_two_schools_must_pick_one(
+        self, school_admin_user, school_a, school_b, job_title
+    ):
+        SchoolStaffAssignmentFactory(
+            school_staff=school_admin_user.school_staff, school=school_b, job_title=job_title
+        )
+        form = AssignSchoolStaffForm(user=school_admin_user)
+        assert set(form.fields["school"].queryset) == {school_a, school_b}
+        assert form.fields["school"].initial is None
+
+    def test_school_admin_posting_other_school_or_admin_group_is_invalid(
+        self, school_admin_user, school_a, school_b, job_title
+    ):
+        base = {"job_title": job_title.pk, "start_date": "2026-01-01"}
+        form = AssignSchoolStaffForm(
+            {**base, "school": school_b.pk, "groups": [gpk("Teachers")]}, user=school_admin_user
+        )
+        assert "school" in form.errors
+        form = AssignSchoolStaffForm(
+            {**base, "school": school_a.pk, "groups": [gpk("School Admins")]}, user=school_admin_user
+        )
+        assert "groups" in form.errors
+
+    @pytest.mark.parametrize(
+        "names,expected",
+        [
+            (["Teachers"], "teaching"),
+            (["Teachers", "School Admins"], "teaching"),
+            (["School Staff"], "non_teaching"),
+            (["School Admins"], "non_teaching"),
+        ],
+    )
+    def test_staff_type_is_derived_from_groups(self, superuser, school_a, job_title, names, expected):
+        form = AssignSchoolStaffForm(
+            {
+                "school": school_a.pk,
+                "job_title": job_title.pk,
+                "start_date": "2026-01-01",
+                "groups": [gpk(n) for n in names],
+            },
+            user=superuser,
+        )
+        assert form.is_valid(), form.errors
+        assert form.staff_type() == expected
+
+    def test_teachers_and_school_staff_are_mutually_exclusive(self, superuser, school_a, job_title):
+        form = AssignSchoolStaffForm(
+            {
+                "school": school_a.pk,
+                "job_title": job_title.pk,
+                "start_date": "2026-01-01",
+                "groups": [gpk("Teachers"), gpk("School Staff")],
+            },
+            user=superuser,
+        )
+        assert not form.is_valid()
+        assert "not both" in form.errors["groups"][0]
+
+    def test_group_choices_carry_descriptions(self, school_admin_user, school_a):
+        form = AssignSchoolStaffForm(user=school_admin_user)
+        pairs = {choice.choice_label: desc for choice, desc in form.group_choices_with_descriptions()}
+        assert pairs == {
+            "School Staff": AssignSchoolStaffForm.GROUP_DESCRIPTIONS["School Staff"],
+            "Teachers": AssignSchoolStaffForm.GROUP_DESCRIPTIONS["Teachers"],
+        }
 
     def test_organization_fields_optional(self, superuser):
         staff_group = Group.objects.get(name="System Staff")

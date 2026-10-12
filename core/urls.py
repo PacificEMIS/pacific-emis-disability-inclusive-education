@@ -17,6 +17,11 @@ urlpatterns = [
     path("staff/<int:pk>/", views.staff_detail, name="staff_detail"),
     path("staff/<int:pk>/edit/", views.staff_edit, name="staff_edit"),
     path(
+        "staff/<int:staff_id>/assignment/new/",
+        views.staff_assignment_add,
+        name="staff_assignment_add",
+    ),
+    path(
         "staff/<int:staff_id>/assignment/<int:pk>/edit/",
         views.staff_assignment_edit,
         name="staff_assignment_edit",
@@ -70,6 +75,11 @@ urlpatterns = [
         "pending-users/<int:user_id>/delete/",
         views.delete_pending_user,
         name="delete_pending_user",
+    ),
+    path(
+        "users/<int:user_id>/reset-to-pending/",
+        views.reset_user_to_pending,
+        name="reset_user_to_pending",
     ),
 
     # Settings (EMIS lookups sync and review)

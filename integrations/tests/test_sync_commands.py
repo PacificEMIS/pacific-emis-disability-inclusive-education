@@ -62,15 +62,45 @@ class TestSyncLookups:
         assert EmisWarehouseYear.objects.get(pk="2026").label == "2026"
         assert EmisJobTitle.objects.get(pk="T").label == "Teacher"
 
-    def test_updates_existing_and_reactivates(self, monkeypatch):
+    def test_updates_existing_and_keeps_local_active_flag(self, monkeypatch):
+        """The active flag is a Settings-page override; a sync must never undo it."""
         EmisSchoolFactory(emis_school_no="KPS001", emis_school_name="Old Name", active=False)
         EmisClassLevelFactory(code="P1", label="Old", active=False)
         self.payload(monkeypatch)
         out = run("emis_sync_lookups")
         assert "Schools +1/1" in out and "Levels +1/1" in out
         s = EmisSchool.objects.get(pk="KPS001")
-        assert s.emis_school_name == "Alpha Primary" and s.active is True
-        assert EmisClassLevel.objects.get(pk="P1").active is True
+        assert s.emis_school_name == "Alpha Primary" and s.active is False
+        lvl = EmisClassLevel.objects.get(pk="P1")
+        assert lvl.label == "Primary 1" and lvl.active is False
+        # new rows still start active
+        assert EmisSchool.objects.get(pk="KPS002").active is True
+
+    def test_levels_sync_year_of_education_and_sort_by_it(self, monkeypatch):
+        self.payload(
+            monkeypatch,
+            levels=[
+                {"C": "G10", "N": "Grade 10", "YoEd": 10, "L": "SEC", "S": "SEC"},
+                {"C": "G2", "N": "Grade 2", "YoEd": 2},
+                {"C": "ECE3", "N": "ECE Year 3", "YoEd": -2},
+                {"C": "ECE", "N": "ECE", "YoEd": "0"},
+                {"C": "UNK", "N": "No year"},
+                {"C": "BAD", "N": "Bad year", "YoEd": "n/a"},
+            ],
+        )
+        run("emis_sync_lookups")
+        by_code = {lvl.code: lvl.year_of_education for lvl in EmisClassLevel.objects.all()}
+        assert by_code == {"ECE3": -2, "ECE": 0, "G2": 2, "G10": 10, "UNK": None, "BAD": None}
+        # default ordering: year of education, then code; unknown years last
+        assert list(EmisClassLevel.objects.values_list("code", flat=True)) == [
+            "ECE3", "ECE", "G2", "G10", "BAD", "UNK",
+        ]
+
+    def test_year_of_education_is_updated_on_resync(self, monkeypatch):
+        EmisClassLevelFactory(code="P1", label="Primary 1", year_of_education=None)
+        self.payload(monkeypatch, levels=[{"C": "P1", "N": "Primary 1", "YoEd": 1}])
+        run("emis_sync_lookups")
+        assert EmisClassLevel.objects.get(pk="P1").year_of_education == 1
 
     def test_items_without_code_are_skipped(self, monkeypatch):
         self.payload(monkeypatch, schoolCodes=[{"C": "", "N": "no code"}, {"N": "none"}])

@@ -23,7 +23,8 @@ Permission Groups
 -----------------
 School-Level (for SchoolStaff users):
   - Admins: System-wide full access
-  - School Admins: School-scoped admin (can manage their schools)
+  - School Admins: School-scoped admin (can manage their schools and
+    on-board pending users as Teachers / School Staff at those schools)
   - Teachers: School-scoped access for teachers
   - School Staff: Read-only at their schools
 
@@ -274,7 +275,8 @@ def filter_staff_for_user(qs: QuerySet, user) -> QuerySet:
 
 def can_edit_staff(user, staff: SchoolStaff) -> bool:
     """
-    Who can *edit* a school staff member (staff_type, groups)?
+    Who can *edit* a school staff member (group memberships; the staff
+    type follows from the groups)?
 
     - Superusers: always.
     - Admins group: always.
@@ -687,6 +689,56 @@ def can_manage_pending_users(user) -> bool:
     if _in_group(user, GROUP_SYSTEM_ADMINS):
         return True
     return False
+
+
+def can_onboard_school_staff(user) -> bool:
+    """
+    Who can see the pending-users list and assign a pending user as School Staff?
+
+    - Everyone who can manage pending users (superusers, Admins, System Admins).
+    - School Admins with at least one active school assignment: yes, but only
+      to their own schools and only into the Teachers / School Staff groups
+      (enforced by AssignSchoolStaffForm). They cannot assign System Users or
+      delete pending users.
+    - Others: never.
+    """
+    if can_manage_pending_users(user):
+        return True
+    if is_school_admin(user):
+        return get_user_schools(user).exists()
+    return False
+
+
+def can_reset_user_to_pending(user) -> bool:
+    """
+    Who can reset an on-boarded user back to pending (remove their
+    SchoolStaff / SystemUser profile, school assignments and groups)?
+
+    - Superusers: always.
+    - Admins group: yes, but only when the user has no audit footprint
+      (see can_force_reset_user_to_pending).
+    - Others: never.
+    """
+    if not user or not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    return is_admins_group(user)
+
+
+def can_force_reset_user_to_pending(user) -> bool:
+    """
+    Who can reset a user to pending even though records (students,
+    enrolments, profiles, assignments) still name them as creator or
+    last editor? Those records are kept and stay attributed to the user
+    account; only the profile, assignments and groups go.
+
+    - Superusers: yes.
+    - Others: never.
+    """
+    if not user or not user.is_authenticated:
+        return False
+    return bool(user.is_superuser)
 
 
 def can_assign_admins_group(user) -> bool:

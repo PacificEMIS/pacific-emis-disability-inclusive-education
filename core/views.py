@@ -63,6 +63,8 @@ from core.permissions import (
     is_system_staff,
     can_edit_system_user,
     can_edit_system_user_groups,
+    can_reset_user_to_pending,
+    can_force_reset_user_to_pending,
     get_user_schools,
     GROUP_ADMINS,
     GROUP_SYSTEM_ADMINS,
@@ -333,44 +335,8 @@ def staff_detail(request, pk):
         messages.error(request, "You do not have permission to view this staff member.")
         return redirect("core:staff_list")
 
-    # Permission: who can add assignments?
+    # Permission: who can add assignments? (the Add button; the add page re-checks)
     can_add_assignment = can_create_staff_assignment(request.user)
-
-    assignment_form = (
-        SchoolStaffAssignmentForm(
-            request.POST or None,
-            instance=SchoolStaffAssignment(school_staff=staff),
-            user=request.user,
-        )
-        if can_add_assignment
-        else None
-    )
-
-    if request.method == "POST":
-        if not can_create_staff_assignment(request.user):
-            messages.error(
-                request, "You do not have permission to add school assignments."
-            )
-        elif assignment_form.is_valid():
-            obj = assignment_form.save(commit=False)
-            obj.school_staff = staff
-
-            # Additional validation: School Admins can only create assignments for their schools
-            if not can_create_staff_assignment(request.user, obj.school):
-                messages.error(
-                    request,
-                    f"You do not have permission to create assignments for {obj.school.emis_school_name}.",
-                )
-            else:
-                # audit fields (if defined on the model)
-                if hasattr(obj, "created_by_id") and obj.created_by_id is None:
-                    obj.created_by = request.user
-                if hasattr(obj, "last_updated_by_id") and obj.last_updated_by_id is None:
-                    obj.last_updated_by = request.user
-
-                obj.save()
-                messages.success(request, "School assignment added.")
-                return redirect("core:staff_detail", pk=staff.pk)
 
     user_obj = staff.user
 
@@ -404,14 +370,63 @@ def staff_detail(request, pk):
     context = {
         "staff": staff,
         "active": "staff",
-        "assignment_form": assignment_form,
         "can_add_assignment": can_add_assignment,
         "can_edit": can_edit_staff(request.user, staff),
+        "can_reset": _can_reset_target(request.user, user_obj),
         "assignment_permissions": assignment_permissions,
         "group_permissions": group_permissions,
         "direct_permission_sections": direct_permission_sections,
     }
     return render(request, "core/staff_detail.html", context)
+
+
+@login_required
+def staff_assignment_add(request, staff_id):
+    """
+    Add a SchoolStaffAssignment for a given staff member.
+
+    Admins and superusers may add for any school; School Admins only for
+    staff they can view and only at their own active schools.
+    """
+    staff = get_object_or_404(SchoolStaff.objects.select_related("user"), pk=staff_id)
+
+    if not can_view_staff(request.user, staff):
+        messages.error(request, "You do not have permission to view this staff member.")
+        return redirect("core:staff_list")
+    if not can_create_staff_assignment(request.user):
+        messages.error(request, "You do not have permission to add school assignments.")
+        return redirect("core:staff_detail", pk=staff.pk)
+
+    form = SchoolStaffAssignmentForm(
+        request.POST or None,
+        instance=SchoolStaffAssignment(school_staff=staff),
+        user=request.user,
+    )
+
+    if request.method == "POST" and form.is_valid():
+        obj = form.save(commit=False)
+        obj.school_staff = staff
+
+        # School Admins can only create assignments for their schools
+        if not can_create_staff_assignment(request.user, obj.school):
+            form.add_error(
+                "school",
+                f"You do not have permission to create assignments for {obj.school.emis_school_name}.",
+            )
+        else:
+            obj.created_by = request.user
+            obj.last_updated_by = request.user
+            obj.save()
+            messages.success(request, "School assignment added.")
+            return redirect("core:staff_detail", pk=staff.pk)
+
+    context = {
+        "active": "staff",
+        "staff": staff,
+        "assignment": None,
+        "form": form,
+    }
+    return render(request, "core/staff_assignment_edit.html", context)
 
 
 @login_required
@@ -501,13 +516,13 @@ def staff_assignment_delete(request, staff_id, pk):
 @login_required
 def staff_edit(request, pk):
     """
-    Edit a school staff member's profile (staff_type) and group memberships.
+    Edit a school staff member's group memberships. The staff type is
+    derived from the resulting groups (Teachers = teaching staff).
 
-    Permissions:
-    - Django Super Users: full access (all fields including groups)
-    - Admins group: full access (all fields including groups)
-    - School Admins group: can edit staff_type, but NOT groups
-      (must have school access to the staff member)
+    Permissions (see can_edit_staff / can_edit_staff_groups):
+    - Django Super Users and Admins group: any group including Admins
+    - System Admins group: any staff member, cannot grant Admins
+    - School Admins group: staff at their own schools, cannot grant Admins
     """
     staff = get_object_or_404(
         SchoolStaff.objects.select_related("user", "created_by", "last_updated_by"),
@@ -529,11 +544,6 @@ def staff_edit(request, pk):
             school_staff=staff,
         )
         if form.is_valid():
-            # Update SchoolStaff fields
-            staff.staff_type = form.cleaned_data["staff_type"]
-            staff.last_updated_by = request.user
-            staff.save()
-
             # Update groups only if user has permission
             if can_edit_groups:
                 new_groups = form.cleaned_data["groups"]
@@ -546,6 +556,11 @@ def staff_edit(request, pk):
                 )
                 # Add new groups
                 staff.user.groups.add(*new_groups)
+
+            # Staff type follows from the groups the user actually ends up with
+            staff.staff_type = SchoolStaffEditForm.staff_type_for(staff.user.groups.all())
+            staff.last_updated_by = request.user
+            staff.save()
 
             messages.success(
                 request,
@@ -726,6 +741,7 @@ def system_user_detail(request, pk):
         "group_permissions": group_permissions,
         "direct_permission_sections": direct_permission_sections,
         "can_edit": can_edit_system_user(request.user, system_user),
+        "can_reset": _can_reset_target(request.user, user_obj),
     }
     return render(request, "core/system_user_detail.html", context)
 
@@ -1538,7 +1554,7 @@ def student_list(request):
     # Picklists (active only; adjust if you want all)
     schools = EmisSchool.objects.filter(active=True).order_by("emis_school_name")
     years = EmisWarehouseYear.objects.filter(active=True).order_by("-code")
-    levels = EmisClassLevel.objects.filter(active=True).order_by("code")
+    levels = EmisClassLevel.objects.filter(active=True).order_by("year_of_education", "code")
 
     # Pagination links
     page_links = _page_links(page_obj)
@@ -1971,7 +1987,7 @@ def student_enrolment_delete(request, student_pk, enrolment_pk):
 
 from django.contrib.auth import get_user_model
 from core.forms import AssignSchoolStaffForm, AssignSystemUserForm
-from core.permissions import can_manage_pending_users
+from core.permissions import can_manage_pending_users, can_onboard_school_staff
 
 User = get_user_model()
 
@@ -1982,9 +1998,10 @@ def pending_users_list(request):
     List users who have signed in (via Google OAuth) but don't yet have
     a SchoolStaff or SystemUser profile assigned.
 
-    Accessible to users in the Admins or System Admins groups.
+    Accessible to users in the Admins or System Admins groups, and to
+    School Admins with an active school (who only get the School Staff action).
     """
-    if not can_manage_pending_users(request.user):
+    if not can_onboard_school_staff(request.user):
         raise PermissionDenied
 
     q = (request.GET.get("q") or "").strip()
@@ -2035,12 +2052,15 @@ def pending_users_list(request):
 @login_required
 def assign_school_staff(request, user_id):
     """
-    Assign a pending user as School Staff.
+    Assign a pending user as School Staff in a single step.
 
-    Creates a SchoolStaff profile and assigns them to selected groups.
-    Accessible to users in the Admins or System Admins groups.
+    Creates a SchoolStaff profile, assigns the selected groups and creates
+    the first school assignment (school, job title, start date).
+    Accessible to Admins, System Admins and School Admins with an active
+    school; the form restricts what each role may choose and the school is
+    re-checked here against can_create_staff_assignment.
     """
-    if not can_manage_pending_users(request.user):
+    if not can_onboard_school_staff(request.user):
         raise PermissionDenied
 
     target_user = get_object_or_404(User, pk=user_id)
@@ -2053,21 +2073,40 @@ def assign_school_staff(request, user_id):
     if request.method == "POST":
         form = AssignSchoolStaffForm(request.POST, user=request.user)
         if form.is_valid():
-            # Create SchoolStaff profile
-            staff = SchoolStaff.objects.create(
-                user=target_user,
-                staff_type=form.cleaned_data["staff_type"],
-                created_by=request.user,
-                last_updated_by=request.user,
-            )
+            school = form.cleaned_data["school"]
+            if not can_create_staff_assignment(request.user, school):
+                form.add_error(
+                    "school",
+                    f"You do not have permission to assign staff to {school.emis_school_name}.",
+                )
+        if form.is_valid():
+            with transaction.atomic():
+                # Create SchoolStaff profile
+                staff = SchoolStaff.objects.create(
+                    user=target_user,
+                    staff_type=form.staff_type(),
+                    created_by=request.user,
+                    last_updated_by=request.user,
+                )
 
-            # Assign groups
-            groups = form.cleaned_data["groups"]
-            target_user.groups.add(*groups)
+                # Assign groups
+                groups = form.cleaned_data["groups"]
+                target_user.groups.add(*groups)
+
+                # First school assignment
+                SchoolStaffAssignment.objects.create(
+                    school_staff=staff,
+                    school=school,
+                    job_title=form.cleaned_data["job_title"],
+                    start_date=form.cleaned_data["start_date"],
+                    created_by=request.user,
+                    last_updated_by=request.user,
+                )
 
             messages.success(
                 request,
-                f"{target_user.get_full_name() or target_user.username} has been assigned as School Staff.",
+                f"{target_user.get_full_name() or target_user.username} has been assigned as "
+                f"School Staff at {school.emis_school_name}.",
             )
             return redirect("core:staff_detail", pk=staff.pk)
     else:
@@ -2189,6 +2228,143 @@ def delete_pending_user(request, user_id):
     )
 
 
+def _can_reset_target(actor, target_user) -> bool:
+    """Show the reset-to-pending action for this target? Never for oneself or a superuser."""
+    return (
+        can_reset_user_to_pending(actor)
+        and actor.pk != target_user.pk
+        and not target_user.is_superuser
+    )
+
+
+def user_audit_footprint(user):
+    """
+    Records that name this user as creator or last editor, excluding the
+    user's own profile and school assignments (which a reset removes).
+
+    Returns a list of (label, count) with zero counts left out. These
+    records are kept by a reset; they stay attributed to the user account.
+    """
+    by_user = Q(created_by=user) | Q(last_updated_by=user)
+    sources = [
+        ("Students", Student.objects.filter(by_user)),
+        ("Student enrolments", StudentSchoolEnrolment.objects.filter(by_user)),
+        ("School staff profiles", SchoolStaff.objects.filter(by_user).exclude(user=user)),
+        (
+            "School staff assignments",
+            SchoolStaffAssignment.objects.filter(by_user).exclude(school_staff__user=user),
+        ),
+        ("System user profiles", SystemUser.objects.filter(by_user).exclude(user=user)),
+    ]
+    footprint = []
+    for label, qs in sources:
+        count = qs.count()
+        if count:
+            footprint.append((label, count))
+    return footprint
+
+
+@login_required
+def reset_user_to_pending(request, user_id):
+    """
+    Put an on-boarded user back into the Pending Users list.
+
+    Removes the SchoolStaff or SystemUser profile, its school assignments
+    and all group memberships. The User row (and its linked Google account)
+    is kept, so the person reappears as pending at once and every record
+    they created or edited stays attributed to them.
+
+    - Admins and superusers may reset a user with no audit footprint.
+    - Only superusers may force a reset when a footprint exists, and must
+      tick the acknowledgement on the confirm page.
+    - Nobody can reset themself or a superuser.
+    """
+    if not can_reset_user_to_pending(request.user):
+        raise PermissionDenied
+
+    target_user = get_object_or_404(User, pk=user_id)
+    staff = getattr(target_user, "school_staff", None)
+    system_user = getattr(target_user, "system_user", None)
+
+    if staff is not None:
+        back_url = reverse("core:staff_detail", kwargs={"pk": staff.pk})
+    elif system_user is not None:
+        back_url = reverse("core:system_user_detail", kwargs={"pk": system_user.pk})
+    else:
+        messages.info(request, f"{target_user} is already a pending user.")
+        return redirect("core:pending_users_list")
+
+    if target_user.pk == request.user.pk:
+        messages.error(request, "You cannot reset your own account.")
+        return redirect(back_url)
+    if target_user.is_superuser:
+        messages.error(request, "Superusers cannot be reset from here. Use the Django admin.")
+        return redirect(back_url)
+
+    footprint = user_audit_footprint(target_user)
+    has_footprint = bool(footprint)
+    can_force = can_force_reset_user_to_pending(request.user)
+    assignments = (
+        list(staff.assignments.select_related("school", "job_title").order_by("start_date"))
+        if staff is not None
+        else []
+    )
+    group_names = list(target_user.groups.order_by("name").values_list("name", flat=True))
+    full_name = target_user.get_full_name() or target_user.username
+    acknowledge_error = False
+
+    if request.method == "POST":
+        if has_footprint and not can_force:
+            raise PermissionDenied
+        if has_footprint and request.POST.get("acknowledge") != "yes":
+            acknowledge_error = True
+        else:
+            with transaction.atomic():
+                if staff is not None:
+                    staff.delete()  # cascades to its school assignments
+                if system_user is not None:
+                    system_user.delete()
+                target_user.groups.clear()
+
+            logger.warning(
+                "User %s (%s) reset %s (%s) to pending: profile=%s, assignments=%d, "
+                "groups=%s, kept records=%s",
+                request.user.username,
+                request.user.pk,
+                target_user.username,
+                target_user.pk,
+                "school_staff" if staff is not None else "system_user",
+                len(assignments),
+                group_names,
+                footprint,
+            )
+            messages.success(
+                request,
+                f"{full_name} has been reset to pending. Their profile, "
+                f"{len(assignments)} school assignment{'s' if len(assignments) != 1 else ''} "
+                f"and {len(group_names)} group{'s' if len(group_names) != 1 else ''} were removed.",
+            )
+            return redirect("core:pending_users_list")
+
+    return render(
+        request,
+        "core/reset_user_to_pending.html",
+        {
+            "active": "staff" if staff is not None else "system_users",
+            "target_user": target_user,
+            "full_name": full_name,
+            "profile_kind": "School Staff" if staff is not None else "System User",
+            "assignments": assignments,
+            "group_names": group_names,
+            "footprint": footprint,
+            "has_footprint": has_footprint,
+            "can_force": can_force,
+            "acknowledge_error": acknowledge_error,
+            "back_url": back_url,
+        },
+    )
+
+
 # ============================================================================
 # Settings (EMIS lookups)
 # ============================================================================
@@ -2205,7 +2381,7 @@ LOOKUP_REGISTRY = OrderedDict([
         "model": EmisClassLevel,
         "label": "Class Levels",
         "icon": "bi-list-ol",
-        "fields": [("code", "Code"), ("label", "Label")],
+        "fields": [("code", "Code"), ("label", "Label"), ("year_of_education", "Year of education")],
     }),
     ("job-titles", {
         "model": EmisJobTitle,
