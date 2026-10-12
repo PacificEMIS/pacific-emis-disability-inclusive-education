@@ -335,44 +335,8 @@ def staff_detail(request, pk):
         messages.error(request, "You do not have permission to view this staff member.")
         return redirect("core:staff_list")
 
-    # Permission: who can add assignments?
+    # Permission: who can add assignments? (the Add button; the add page re-checks)
     can_add_assignment = can_create_staff_assignment(request.user)
-
-    assignment_form = (
-        SchoolStaffAssignmentForm(
-            request.POST or None,
-            instance=SchoolStaffAssignment(school_staff=staff),
-            user=request.user,
-        )
-        if can_add_assignment
-        else None
-    )
-
-    if request.method == "POST":
-        if not can_create_staff_assignment(request.user):
-            messages.error(
-                request, "You do not have permission to add school assignments."
-            )
-        elif assignment_form.is_valid():
-            obj = assignment_form.save(commit=False)
-            obj.school_staff = staff
-
-            # Additional validation: School Admins can only create assignments for their schools
-            if not can_create_staff_assignment(request.user, obj.school):
-                messages.error(
-                    request,
-                    f"You do not have permission to create assignments for {obj.school.emis_school_name}.",
-                )
-            else:
-                # audit fields (if defined on the model)
-                if hasattr(obj, "created_by_id") and obj.created_by_id is None:
-                    obj.created_by = request.user
-                if hasattr(obj, "last_updated_by_id") and obj.last_updated_by_id is None:
-                    obj.last_updated_by = request.user
-
-                obj.save()
-                messages.success(request, "School assignment added.")
-                return redirect("core:staff_detail", pk=staff.pk)
 
     user_obj = staff.user
 
@@ -406,7 +370,6 @@ def staff_detail(request, pk):
     context = {
         "staff": staff,
         "active": "staff",
-        "assignment_form": assignment_form,
         "can_add_assignment": can_add_assignment,
         "can_edit": can_edit_staff(request.user, staff),
         "can_reset": _can_reset_target(request.user, user_obj),
@@ -415,6 +378,55 @@ def staff_detail(request, pk):
         "direct_permission_sections": direct_permission_sections,
     }
     return render(request, "core/staff_detail.html", context)
+
+
+@login_required
+def staff_assignment_add(request, staff_id):
+    """
+    Add a SchoolStaffAssignment for a given staff member.
+
+    Admins and superusers may add for any school; School Admins only for
+    staff they can view and only at their own active schools.
+    """
+    staff = get_object_or_404(SchoolStaff.objects.select_related("user"), pk=staff_id)
+
+    if not can_view_staff(request.user, staff):
+        messages.error(request, "You do not have permission to view this staff member.")
+        return redirect("core:staff_list")
+    if not can_create_staff_assignment(request.user):
+        messages.error(request, "You do not have permission to add school assignments.")
+        return redirect("core:staff_detail", pk=staff.pk)
+
+    form = SchoolStaffAssignmentForm(
+        request.POST or None,
+        instance=SchoolStaffAssignment(school_staff=staff),
+        user=request.user,
+    )
+
+    if request.method == "POST" and form.is_valid():
+        obj = form.save(commit=False)
+        obj.school_staff = staff
+
+        # School Admins can only create assignments for their schools
+        if not can_create_staff_assignment(request.user, obj.school):
+            form.add_error(
+                "school",
+                f"You do not have permission to create assignments for {obj.school.emis_school_name}.",
+            )
+        else:
+            obj.created_by = request.user
+            obj.last_updated_by = request.user
+            obj.save()
+            messages.success(request, "School assignment added.")
+            return redirect("core:staff_detail", pk=staff.pk)
+
+    context = {
+        "active": "staff",
+        "staff": staff,
+        "assignment": None,
+        "form": form,
+    }
+    return render(request, "core/staff_assignment_edit.html", context)
 
 
 @login_required
@@ -504,13 +516,13 @@ def staff_assignment_delete(request, staff_id, pk):
 @login_required
 def staff_edit(request, pk):
     """
-    Edit a school staff member's profile (staff_type) and group memberships.
+    Edit a school staff member's group memberships. The staff type is
+    derived from the resulting groups (Teachers = teaching staff).
 
-    Permissions:
-    - Django Super Users: full access (all fields including groups)
-    - Admins group: full access (all fields including groups)
-    - School Admins group: can edit staff_type, but NOT groups
-      (must have school access to the staff member)
+    Permissions (see can_edit_staff / can_edit_staff_groups):
+    - Django Super Users and Admins group: any group including Admins
+    - System Admins group: any staff member, cannot grant Admins
+    - School Admins group: staff at their own schools, cannot grant Admins
     """
     staff = get_object_or_404(
         SchoolStaff.objects.select_related("user", "created_by", "last_updated_by"),
@@ -532,11 +544,6 @@ def staff_edit(request, pk):
             school_staff=staff,
         )
         if form.is_valid():
-            # Update SchoolStaff fields
-            staff.staff_type = form.cleaned_data["staff_type"]
-            staff.last_updated_by = request.user
-            staff.save()
-
             # Update groups only if user has permission
             if can_edit_groups:
                 new_groups = form.cleaned_data["groups"]
@@ -549,6 +556,11 @@ def staff_edit(request, pk):
                 )
                 # Add new groups
                 staff.user.groups.add(*new_groups)
+
+            # Staff type follows from the groups the user actually ends up with
+            staff.staff_type = SchoolStaffEditForm.staff_type_for(staff.user.groups.all())
+            staff.last_updated_by = request.user
+            staff.save()
 
             messages.success(
                 request,

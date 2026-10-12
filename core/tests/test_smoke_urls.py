@@ -50,6 +50,7 @@ CORE_URLS = [
     ("staff_list", lambda o: {}, 200),
     ("staff_detail", lambda o: {"pk": o["staff"].pk}, 200),
     ("staff_edit", lambda o: {"pk": o["staff"].pk}, 200),
+    ("staff_assignment_add", lambda o: {"staff_id": o["staff"].pk}, 200),
     (
         "staff_assignment_edit",
         lambda o: {"staff_id": o["staff"].pk, "pk": o["assignment"].pk},

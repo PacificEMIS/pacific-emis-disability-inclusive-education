@@ -179,8 +179,33 @@ class TestSchoolStaffEditForm:
     def test_initial_values_come_from_staff(self, superuser, teacher_user):
         staff = teacher_user.school_staff
         form = SchoolStaffEditForm(user=superuser, school_staff=staff)
-        assert form.initial["staff_type"] == staff.staff_type
+        assert "staff_type" not in form.fields  # derived from groups, never chosen
         assert list(form.initial["groups"].values_list("name", flat=True)) == ["Teachers"]
+
+    def test_teachers_and_school_staff_are_mutually_exclusive(self, superuser, teacher_user):
+        form = SchoolStaffEditForm(
+            {"groups": [gpk("Teachers"), gpk("School Staff")]},
+            user=superuser,
+            school_staff=teacher_user.school_staff,
+        )
+        assert not form.is_valid()
+        assert "not both" in form.errors["groups"][0]
+
+    @pytest.mark.parametrize(
+        "names,expected",
+        [(["Teachers"], "teaching"), (["Teachers", "Admins"], "teaching"), (["School Staff"], "non_teaching")],
+    )
+    def test_staff_type_is_derived_from_groups(self, superuser, teacher_user, names, expected):
+        form = SchoolStaffEditForm(
+            {"groups": [gpk(n) for n in names]}, user=superuser, school_staff=teacher_user.school_staff
+        )
+        assert form.is_valid(), form.errors
+        assert form.staff_type() == expected
+
+    def test_group_choices_carry_descriptions(self, superuser):
+        form = SchoolStaffEditForm(user=superuser)
+        pairs = dict((c.choice_label, d) for c, d in form.group_choices_with_descriptions())
+        assert pairs == SchoolStaffEditForm.GROUP_DESCRIPTIONS
 
     def test_initial_groups_hide_admins_from_limited_editor(self, school_admin_user, admin_user):
         form = SchoolStaffEditForm(user=school_admin_user, school_staff=admin_user.school_staff)
@@ -189,7 +214,7 @@ class TestSchoolStaffEditForm:
     def test_posting_admins_group_as_system_admin_is_rejected(self, system_admin_user, teacher_user):
         admins = Group.objects.get(name="Admins")
         form = SchoolStaffEditForm(
-            {"staff_type": "teaching", "groups": [admins.pk]},
+            {"groups": [admins.pk]},
             user=system_admin_user,
             school_staff=teacher_user.school_staff,
         )
@@ -198,7 +223,7 @@ class TestSchoolStaffEditForm:
 
     def test_at_least_one_group_required(self, superuser, teacher_user):
         form = SchoolStaffEditForm(
-            {"staff_type": "teaching", "groups": []},
+            {"groups": []},
             user=superuser,
             school_staff=teacher_user.school_staff,
         )

@@ -158,31 +158,5 @@
 {% endblock content %}
 
 {% block extra_js %}
-<script>
-(function () {
-  // Teachers (teaching staff) and School Staff (non-teaching staff) are
-  // mutually exclusive: ticking one clears the other. The form also rejects
-  // both server side.
-  var boxes = Array.prototype.slice.call(
-    document.querySelectorAll('input[type="checkbox"][name="groups"]')
-  );
-  function labelOf(box) {
-    var label = document.querySelector('label[for="' + box.id + '"]');
-    return label ? label.textContent.trim().split(/\s+/).slice(0, 2).join(' ') : '';
-  }
-  var teachers = null, schoolStaff = null;
-  boxes.forEach(function (box) {
-    var text = labelOf(box);
-    if (text.indexOf('Teachers') === 0) teachers = box;
-    if (text.indexOf('School Staff') === 0) schoolStaff = box;
-  });
-  if (!teachers || !schoolStaff) return;
-  teachers.addEventListener('change', function () {
-    if (teachers.checked) schoolStaff.checked = false;
-  });
-  schoolStaff.addEventListener('change', function () {
-    if (schoolStaff.checked) teachers.checked = false;
-  });
-})();
-</script>
+  {% include "core/includes/teachers_school_staff_toggle.html" %}
 {% endblock extra_js %}

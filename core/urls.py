@@ -17,6 +17,11 @@ urlpatterns = [
     path("staff/<int:pk>/", views.staff_detail, name="staff_detail"),
     path("staff/<int:pk>/edit/", views.staff_edit, name="staff_edit"),
     path(
+        "staff/<int:staff_id>/assignment/new/",
+        views.staff_assignment_add,
+        name="staff_assignment_add",
+    ),
+    path(
         "staff/<int:staff_id>/assignment/<int:pk>/edit/",
         views.staff_assignment_edit,
         name="staff_assignment_edit",

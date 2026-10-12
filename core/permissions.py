@@ -275,7 +275,8 @@ def filter_staff_for_user(qs: QuerySet, user) -> QuerySet:
 
 def can_edit_staff(user, staff: SchoolStaff) -> bool:
     """
-    Who can *edit* a school staff member (staff_type, groups)?
+    Who can *edit* a school staff member (group memberships; the staff
+    type follows from the groups)?
 
     - Superusers: always.
     - Admins group: always.

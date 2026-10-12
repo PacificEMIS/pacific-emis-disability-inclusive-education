@@ -72,20 +72,59 @@ class SchoolStaffAssignmentForm(ModelForm):
         return cleaned
 
 
-class SchoolStaffEditForm(forms.Form):
+class SchoolGroupsMixin:
     """
-    Form to edit an existing School Staff member.
+    Shared behaviour for forms with a school-level ``groups`` field.
 
-    - Django Super Users and Admins group: can edit all fields including all groups
-    - School Admins group: can edit staff_type and groups, but cannot assign Admins group
+    - One description per group, rendered next to each checkbox.
+    - Teachers (teaching staff) and School Staff (non-teaching staff) are
+      mutually exclusive.
+    - The SchoolStaff.staff_type is never chosen by hand: it follows from
+      the groups (Teachers = teaching, anything else = non-teaching).
     """
 
-    staff_type = forms.ChoiceField(
-        label="Staff type",
-        choices=SchoolStaff.STAFF_TYPE_CHOICES,
-        widget=forms.Select(attrs={"class": "form-select form-select-sm"}),
-        help_text="Whether this staff member is teaching or non-teaching.",
-    )
+    GROUP_DESCRIPTIONS = {
+        "Admins": "Full system access",
+        "School Admins": "Manage staff and students at their schools",
+        "Teachers": "Teaching staff. Can add and edit students at their schools",
+        "School Staff": "Non-teaching staff. Read-only access at their schools",
+    }
+
+    def clean_groups(self):
+        groups = self.cleaned_data["groups"]
+        names = {g.name for g in groups}
+        if {"Teachers", "School Staff"} <= names:
+            raise forms.ValidationError(
+                "Pick either Teachers (teaching staff) or School Staff "
+                "(non-teaching staff), not both."
+            )
+        return groups
+
+    @staticmethod
+    def staff_type_for(groups) -> str:
+        """Teaching staff when the Teachers group is among ``groups``, otherwise non-teaching."""
+        if any(g.name == "Teachers" for g in groups):
+            return SchoolStaff.TEACHING_STAFF
+        return SchoolStaff.NON_TEACHING_STAFF
+
+    def staff_type(self) -> str:
+        return self.staff_type_for(self.cleaned_data.get("groups") or [])
+
+    def group_choices_with_descriptions(self):
+        """Yield (checkbox, description) pairs for the template."""
+        for choice in self["groups"]:
+            yield choice, self.GROUP_DESCRIPTIONS.get(choice.choice_label, "")
+
+
+class SchoolStaffEditForm(SchoolGroupsMixin, forms.Form):
+    """
+    Form to edit an existing School Staff member's group memberships.
+    The staff type is derived from the groups on save.
+
+    - Django Super Users and Admins group: any school-level group including Admins
+    - System Admins and School Admins groups: school-level groups except Admins
+      (School Admins only for staff at their own schools; see can_edit_staff_groups)
+    """
 
     groups = forms.ModelMultipleChoiceField(
         label="Groups",
@@ -124,7 +163,6 @@ class SchoolStaffEditForm(forms.Form):
 
         # Set initial values from the school_staff being edited
         if school_staff:
-            self.initial["staff_type"] = school_staff.staff_type
             # Only show groups that are in the available queryset
             self.initial["groups"] = school_staff.user.groups.filter(
                 name__in=school_groups
@@ -361,7 +399,7 @@ class StudentEnrolmentForm(forms.ModelForm):
 # ============================================================================
 
 
-class AssignSchoolStaffForm(forms.Form):
+class AssignSchoolStaffForm(SchoolGroupsMixin, forms.Form):
     """
     Form to assign a pending user as School Staff in a single step.
 
@@ -375,15 +413,8 @@ class AssignSchoolStaffForm(forms.Form):
       and School Staff groups (defaults to their school when they have one)
 
     The staff type is derived from the groups: Teachers means teaching staff,
-    anything else means non-teaching staff (see staff_type()).
+    anything else means non-teaching staff (see SchoolGroupsMixin).
     """
-
-    GROUP_DESCRIPTIONS = {
-        "Admins": "Full system access",
-        "School Admins": "Manage staff and students at their schools",
-        "Teachers": "Teaching staff. Can add and edit students at their schools",
-        "School Staff": "Non-teaching staff. Read-only access at their schools",
-    }
 
     groups = forms.ModelMultipleChoiceField(
         label="Groups",
@@ -467,29 +498,6 @@ class AssignSchoolStaffForm(forms.Form):
             ).order_by("emis_school_name")
 
         self.fields["start_date"].initial = timezone.now().date()
-
-    def clean_groups(self):
-        """Teachers (teaching) and School Staff (non-teaching) are mutually exclusive."""
-        groups = self.cleaned_data["groups"]
-        names = {g.name for g in groups}
-        if {"Teachers", "School Staff"} <= names:
-            raise forms.ValidationError(
-                "Pick either Teachers (teaching staff) or School Staff "
-                "(non-teaching staff), not both."
-            )
-        return groups
-
-    def staff_type(self) -> str:
-        """Teaching staff when the Teachers group is selected, otherwise non-teaching."""
-        groups = self.cleaned_data.get("groups") or []
-        if any(g.name == "Teachers" for g in groups):
-            return SchoolStaff.TEACHING_STAFF
-        return SchoolStaff.NON_TEACHING_STAFF
-
-    def group_choices_with_descriptions(self):
-        """Yield (checkbox, description) pairs for the template."""
-        for choice in self["groups"]:
-            yield choice, self.GROUP_DESCRIPTIONS.get(choice.choice_label, "")
 
 
 class AssignSystemUserForm(forms.Form):
