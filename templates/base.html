@@ -13,6 +13,7 @@
       <meta name="robots" content="index,follow">
     {% endblock meta %}
     <title>
+      {% if emis_environment %}[{{ emis_environment|upper }}]{% endif %}
       {% block title %}
         Admin
       {% endblock title %}
@@ -26,17 +27,26 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
           rel="stylesheet" />
     <!-- Custom -->
+    <link href="{% static 'app/theme.css' %}" rel="stylesheet">
     <link href="{% static 'app/admin.css' %}" rel="stylesheet">
     {% block extra_head %}
     {% endblock extra_head %}
   </head>
   <body>
+    {% if emis_environment %}
+      {# Not production: say so where nobody can miss it #}
+      <div class="app-env-banner" role="alert">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        {{ emis_environment|upper }} environment &mdash; this is not the production {{ emis_name }}
+        <i class="bi bi-exclamation-triangle-fill"></i>
+      </div>
+    {% endif %}
     {# Outer wrapper: flex row for sidebar layout, plain div otherwise #}
     <div class="{% if request.user.is_authenticated and not hide_sidebar %}d-flex{% endif %}">
 
       {% if request.user.is_authenticated and not hide_sidebar %}
         <!-- Sidebar -->
-        <div class="offcanvas-md offcanvas-start sidebar-column p-0 bg-primary text-light"
+        <div class="offcanvas-md offcanvas-start sidebar-column app-sidebar p-0"
              tabindex="-1"
              id="sidebarNav">
           <div class="offcanvas-header d-md-none justify-content-end">
@@ -52,45 +62,47 @@
               <img src="{% static 'app/logos/' %}{{ emis_logo }}.png"
                    alt="{{ emis_context }} Logo"
                    class="sidebar-logo mb-2">
-              <div class="sidebar-app-title fw-bold">{{ emis_context }}</div>
-              <div class="sidebar-app-subtitle text-light small">{{ app_name }}</div>
+              <div class="sidebar-app-title fw-bold">{{ emis_name }}</div>
+              <div class="sidebar-app-subtitle">{{ app_name }}</div>
+              {% if emis_environment %}
+                <div class="app-env-badge">{{ emis_environment|upper }}</div>
+              {% endif %}
             </div>
-            <hr class="text-secondary mx-3 mt-0">
             <!-- Navigation -->
             <nav class="h-100 d-flex flex-column">
               <ul class="nav nav-pills flex-column mb-auto">
                 <li class="nav-item">
-                  <a class="nav-link d-flex align-items-center text-light {% if active == 'dashboard' %}active{% endif %}"
+                  <a class="nav-link d-flex align-items-center {% if active == 'dashboard' %}active{% endif %}"
                      href="{% url 'core:dashboard' %}">
                     <i class="bi bi-speedometer2 me-2"></i> Dashboard
                   </a>
                 </li>
                 <li>
-                  <a class="nav-link d-flex align-items-center text-light {% if active == 'staff' %}active{% endif %}"
+                  <a class="nav-link d-flex align-items-center {% if active == 'staff' %}active{% endif %}"
                      href="{% url 'core:staff_list' %}">
                     <i class="bi bi-people me-2"></i> School Staff
                   </a>
                 </li>
                 {% if is_system_level_user %}
                   <li>
-                    <a class="nav-link d-flex align-items-center text-light {% if active == 'system_users' %}active{% endif %}"
+                    <a class="nav-link d-flex align-items-center {% if active == 'system_users' %}active{% endif %}"
                        href="{% url 'core:system_user_list' %}">
                       <i class="bi bi-building me-2"></i> {{ terminology.system_users_plural }}
                     </a>
                   </li>
                 {% endif %}
                 <li>
-                  <a class="nav-link d-flex align-items-center text-light {% if active == 'students' %}active{% endif %}"
+                  <a class="nav-link d-flex align-items-center {% if active == 'students' %}active{% endif %}"
                      href="{% url 'core:student_list' %}">
                     <i class="bi bi-mortarboard me-2"></i> Students
                   </a>
                 </li>
                 {% if can_onboard_school_staff %}
                   <li class="nav-item mt-3">
-                    <span class="sidebar-section-label px-3 small text-uppercase text-light">Admin</span>
+                    <span class="sidebar-section-label">Admin</span>
                   </li>
                   <li>
-                    <a class="nav-link d-flex align-items-center text-light {% if active == 'pending_users' %}active{% endif %}"
+                    <a class="nav-link d-flex align-items-center {% if active == 'pending_users' %}active{% endif %}"
                        href="{% url 'core:pending_users_list' %}">
                       <i class="bi bi-person-plus me-2"></i> Pending Users
                     </a>
@@ -98,16 +110,16 @@
                 {% endif %}
                 {% if can_manage_pending_users %}
                   <li>
-                    <a class="nav-link d-flex align-items-center text-light {% if active == 'settings' %}active{% endif %}"
+                    <a class="nav-link d-flex align-items-center {% if active == 'settings' %}active{% endif %}"
                        href="{% url 'core:settings' %}">
                       <i class="bi bi-gear me-2"></i> Settings
                     </a>
                   </li>
                   <li class="nav-item mt-3">
-                    <span class="sidebar-section-label px-3 small text-uppercase text-light">Utilities</span>
+                    <span class="sidebar-section-label">Utilities</span>
                   </li>
                   <li>
-                    <a class="nav-link d-flex align-items-center text-light {% if active == 'test_email' %}active{% endif %}"
+                    <a class="nav-link d-flex align-items-center {% if active == 'test_email' %}active{% endif %}"
                        href="{% url 'core:test_email' %}">
                       <i class="bi bi-envelope-check me-2"></i> Test Email
                     </a>
@@ -124,7 +136,7 @@
 
         <!-- Header -->
         {% if request.user.is_authenticated and not hide_sidebar %}
-          <header class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow content-header">
+          <header class="navbar sticky-top app-toolbar flex-md-nowrap p-0 content-header">
             <!-- Mobile sidebar toggle -->
             <button class="navbar-toggler d-md-none collapsed ms-2"
                     type="button"
@@ -136,34 +148,43 @@
             </button>
             <div class="flex-grow-1"></div>
             <div class="navbar-nav flex-row align-items-center">
-              <!-- Logged-in user badge -->
-              <div class="nav-item text-nowrap me-2">
-                {% if user_profile_url %}
-                  <a href="{{ user_profile_url }}"
-                     class="navbar-text text-light small d-flex align-items-center text-decoration-none"
-                     title="View your profile">
-                    <i class="bi bi-person-circle me-1 d-none d-md-inline"></i>
-                    {{ request.user.get_full_name|default:request.user.username }}
-                    <span class="d-none d-md-inline">{% if request.user.email %} ({{ request.user.email }}){% endif %}</span>
-                  </a>
-                {% else %}
-                  <span class="navbar-text text-light small d-flex align-items-center">
-                    <i class="bi bi-person-circle me-1 d-none d-md-inline"></i>
-                    {{ request.user.get_full_name|default:request.user.username }}
-                    <span class="d-none d-md-inline">{% if request.user.email %} ({{ request.user.email }}){% endif %}</span>
-                  </span>
-                {% endif %}
-              </div>
-              <!-- Sign out -->
-              <div class="nav-item text-nowrap">
-                <a class="nav-link px-3" href="{% url 'accounts:logout' %}">
-                  <i class="bi bi-box-arrow-right me-1"></i> Sign Out
-                </a>
+              <!-- The user: a menu with the profile and sign out, as the Pacific EMIS client has -->
+              <div class="nav-item dropdown">
+                <button type="button"
+                        class="btn app-toolbar-user dropdown-toggle"
+                        id="userMenu"
+                        data-bs-toggle="dropdown"
+                        data-bs-auto-close="true"
+                        aria-expanded="false">
+                  <i class="bi bi-person-circle"></i>
+                  <span class="d-none d-md-inline">{{ request.user.get_full_name|default:request.user.username }}</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end app-user-menu" aria-labelledby="userMenu">
+                  <li>
+                    <div class="dropdown-header">
+                      <div class="app-user-menu-name">{{ request.user.get_full_name|default:request.user.username }}</div>
+                      {% if request.user.email %}<div class="app-user-menu-email">{{ request.user.email }}</div>{% endif %}
+                    </div>
+                  </li>
+                  {% if user_profile_url %}
+                    <li>
+                      <a class="dropdown-item" href="{{ user_profile_url }}">
+                        <i class="bi bi-person-badge"></i> Profile
+                      </a>
+                    </li>
+                  {% endif %}
+                  <li><hr class="dropdown-divider"></li>
+                  <li>
+                    <a class="dropdown-item" href="{% url 'accounts:logout' %}">
+                      <i class="bi bi-box-arrow-right"></i> Sign Out
+                    </a>
+                  </li>
+                </ul>
               </div>
             </div>
           </header>
         {% elif not request.user.is_authenticated %}
-          <header class="navbar navbar-dark sticky-top bg-primary flex-md-nowrap p-0 shadow">
+          <header class="navbar navbar-dark sticky-top app-brand-bar flex-md-nowrap p-0">
             <a class="navbar-brand me-0 px-3"
                href="{% url 'core:dashboard' %}">{{ emis_context }} &mdash; {{ app_name }}</a>
           </header>
@@ -188,7 +209,7 @@
               {% endblock content %}
 
               {% if request.user.is_authenticated and not hide_sidebar %}
-                <footer class="pt-5 small text-body-secondary">
+                <footer class="app-footer pt-5">
                   <hr>
                   <div>
                     &copy; {% now "Y" %} {{ emis_context }} &mdash; {{ app_name }} |

@@ -1,0 +1,451 @@
+/* ==========================================================
+   Pacific EMIS theme for Bootstrap 5.3
+
+   Makes this Bootstrap app look like the Pacific EMIS web client
+   (pineapples/PacificEMIS.UI, Angular Material). The brand tokens below
+   carry the same names and values as that client's src/styles.scss; the
+   --emis-sys-* tokens mirror the Material system tokens its azure theme
+   resolves to. Change a value there, change it here.
+
+   Loaded after bootstrap.min.css and before admin.css. Only the shell
+   (side menu, toolbar) lives in admin.css; everything a page is built
+   from (type, colour, buttons, cards, tables, forms) is themed here
+   through Bootstrap's own CSS variables, so templates stay untouched.
+   ========================================================== */
+
+/* --- Roboto, self-hosted (static/app/fonts, SIL OFL 1.1) --- */
+@font-face {
+  font-family: "Roboto";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 300;
+  src: url(fonts/roboto-latin-300-normal.woff2) format("woff2");
+}
+
+@font-face {
+  font-family: "Roboto";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url(fonts/roboto-latin-400-normal.woff2) format("woff2");
+}
+
+@font-face {
+  font-family: "Roboto";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 500;
+  src: url(fonts/roboto-latin-500-normal.woff2) format("woff2");
+}
+
+/* --- Brand and system tokens --- */
+:root {
+  /* the brand blue: a deep sea blue, the side menu's colour, on every heading bar */
+  --emis-blue: #114a8f;
+  --emis-blue-dark: #0e3f7c;
+  --emis-blue-light: #2f69b4;
+  --emis-light-grey: rgba(230, 230, 230, 0.4);
+  /* "yes, done, fine": a tick, a submitted mark */
+  --emis-good: #2e7d32;
+  /* the surface tiles (cards) are drawn on */
+  --emis-tile-surface: #ffffff;
+
+  /* Material azure theme, light scheme, as the Angular client resolves it */
+  --emis-sys-primary: #005cbb;
+  --emis-sys-on-primary: #ffffff;
+  --emis-sys-primary-container: #d7e3ff;
+  --emis-sys-on-primary-container: #00458f;
+  --emis-sys-secondary: #565e71;
+  --emis-sys-secondary-container: #dae2f9;
+  --emis-sys-on-secondary-container: #3e4759;
+  --emis-sys-surface: #faf9fd;
+  --emis-sys-on-surface: #1a1b1f;
+  --emis-sys-on-surface-variant: #44474e;
+  --emis-sys-surface-container-low: #f4f3f6;
+  --emis-sys-surface-container: #efedf0;
+  --emis-sys-surface-container-high: #e9e7eb;
+  --emis-sys-outline: #74777f;
+  --emis-sys-outline-variant: #c4c6d0;
+  --emis-sys-error: #ba1a1a;
+  --emis-sys-error-container: #ffdad6;
+  --emis-sys-on-error-container: #93000a;
+  --emis-sys-level1: 0px 2px 1px -1px rgba(0, 0, 0, 0.2), 0px 1px 1px 0px rgba(0, 0, 0, 0.14), 0px 1px 3px 0px rgba(0, 0, 0, 0.12);
+  --emis-sys-level2: 0px 3px 3px -2px rgba(0, 0, 0, 0.2), 0px 3px 4px 0px rgba(0, 0, 0, 0.14), 0px 1px 8px 0px rgba(0, 0, 0, 0.12);
+  /* Material shape scale */
+  --emis-sys-corner-extra-small: 4px;
+  --emis-sys-corner-small: 8px;
+  --emis-sys-corner-medium: 12px;
+  --emis-sys-corner-full: 9999px;
+}
+
+/* --- Bootstrap root variables --- */
+:root,
+[data-bs-theme="light"] {
+  --bs-font-sans-serif: Roboto, "Helvetica Neue", Arial, sans-serif;
+  --bs-body-font-family: var(--bs-font-sans-serif);
+  /* Material body-medium: 14px / 20px */
+  --bs-body-font-size: 0.875rem;
+  --bs-body-line-height: 1.43;
+  --bs-body-color: var(--emis-sys-on-surface);
+  --bs-body-color-rgb: 26, 27, 31;
+  --bs-body-bg: var(--emis-sys-surface);
+  --bs-body-bg-rgb: 250, 249, 253;
+  --bs-secondary-color: var(--emis-sys-on-surface-variant);
+  --bs-secondary-color-rgb: 68, 71, 78;
+  --bs-tertiary-bg: var(--emis-sys-surface-container-low);
+  --bs-tertiary-bg-rgb: 244, 243, 246;
+  --bs-emphasis-color: var(--emis-sys-on-surface);
+
+  --bs-primary: var(--emis-sys-primary);
+  --bs-primary-rgb: 0, 92, 187;
+  --bs-primary-text-emphasis: var(--emis-sys-on-primary-container);
+  --bs-primary-bg-subtle: var(--emis-sys-primary-container);
+  --bs-primary-border-subtle: #b3c8ef;
+  --bs-secondary: var(--emis-sys-secondary);
+  --bs-secondary-rgb: 86, 94, 113;
+  --bs-danger: var(--emis-sys-error);
+  --bs-danger-rgb: 186, 26, 26;
+  --bs-success: var(--emis-good);
+  --bs-success-rgb: 46, 125, 50;
+
+  --bs-link-color: var(--emis-sys-primary);
+  --bs-link-color-rgb: 0, 92, 187;
+  --bs-link-hover-color: var(--emis-sys-on-primary-container);
+  --bs-link-hover-color-rgb: 0, 69, 143;
+
+  --bs-border-color: var(--emis-sys-outline-variant);
+  --bs-border-color-translucent: var(--emis-sys-outline-variant);
+  --bs-border-radius: var(--emis-sys-corner-small);
+  --bs-border-radius-sm: var(--emis-sys-corner-extra-small);
+  --bs-border-radius-lg: var(--emis-sys-corner-medium);
+  --bs-border-radius-xl: 16px;
+  --bs-border-radius-pill: var(--emis-sys-corner-full);
+
+  --bs-focus-ring-color: rgba(0, 92, 187, 0.25);
+  --bs-box-shadow-sm: var(--emis-sys-level1);
+  --bs-box-shadow: var(--emis-sys-level2);
+}
+
+/* Links: the primary colour marks them, the underline comes on hover and focus */
+a {
+  text-decoration: none;
+}
+
+a:hover,
+a:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Headings in Roboto weigh 500, as Material titles do */
+h1, h2, h3, h4, h5, h6,
+.h1, .h2, .h3, .h4, .h5, .h6 {
+  font-weight: 500;
+}
+
+/* --- Buttons: Material filled / outlined / text, drawn with Bootstrap's variables --- */
+.btn {
+  --bs-btn-font-weight: 500;
+  --bs-btn-font-size: 0.875rem;
+  --bs-btn-line-height: 1.25rem;
+  --bs-btn-padding-y: 0.5rem;
+  --bs-btn-padding-x: 1.5rem;
+  --bs-btn-border-radius: var(--emis-sys-corner-full);
+  --bs-btn-focus-box-shadow: 0 0 0 0.2rem var(--bs-focus-ring-color);
+  letter-spacing: 0.00625rem;
+}
+
+.btn-sm {
+  --bs-btn-padding-y: 0.3125rem;
+  --bs-btn-padding-x: 1rem;
+  --bs-btn-font-size: 0.8125rem;
+  --bs-btn-border-radius: var(--emis-sys-corner-full);
+}
+
+.btn-lg {
+  --bs-btn-padding-y: 0.625rem;
+  --bs-btn-padding-x: 2rem;
+  --bs-btn-font-size: 0.9375rem;
+  --bs-btn-border-radius: var(--emis-sys-corner-full);
+}
+
+.btn-primary {
+  --bs-btn-bg: var(--emis-sys-primary);
+  --bs-btn-border-color: var(--emis-sys-primary);
+  --bs-btn-hover-bg: #0f54ab;
+  --bs-btn-hover-border-color: #0f54ab;
+  --bs-btn-active-bg: #1a4f9e;
+  --bs-btn-active-border-color: #1a4f9e;
+  --bs-btn-disabled-bg: rgba(26, 27, 31, 0.12);
+  --bs-btn-disabled-border-color: transparent;
+  --bs-btn-disabled-color: rgba(26, 27, 31, 0.38);
+}
+
+.btn-secondary {
+  --bs-btn-bg: var(--emis-sys-secondary);
+  --bs-btn-border-color: var(--emis-sys-secondary);
+  --bs-btn-hover-bg: #4a5264;
+  --bs-btn-hover-border-color: #4a5264;
+  --bs-btn-active-bg: #414957;
+  --bs-btn-active-border-color: #414957;
+}
+
+.btn-danger {
+  --bs-btn-bg: var(--emis-sys-error);
+  --bs-btn-border-color: var(--emis-sys-error);
+  --bs-btn-hover-bg: #a51616;
+  --bs-btn-hover-border-color: #a51616;
+  --bs-btn-active-bg: #931313;
+  --bs-btn-active-border-color: #931313;
+}
+
+.btn-success {
+  --bs-btn-bg: var(--emis-good);
+  --bs-btn-border-color: var(--emis-good);
+  --bs-btn-hover-bg: #27692a;
+  --bs-btn-hover-border-color: #27692a;
+  --bs-btn-active-bg: #225d25;
+  --bs-btn-active-border-color: #225d25;
+}
+
+/* Outlined buttons: Material draws them all in the primary colour with a grey outline */
+.btn-outline-primary,
+.btn-outline-secondary {
+  --bs-btn-color: var(--emis-sys-primary);
+  --bs-btn-border-color: var(--emis-sys-outline);
+  --bs-btn-hover-color: var(--emis-sys-primary);
+  --bs-btn-hover-bg: rgba(0, 92, 187, 0.08);
+  --bs-btn-hover-border-color: var(--emis-sys-outline);
+  --bs-btn-active-color: var(--emis-sys-primary);
+  --bs-btn-active-bg: rgba(0, 92, 187, 0.12);
+  --bs-btn-active-border-color: var(--emis-sys-outline);
+  --bs-btn-disabled-color: rgba(26, 27, 31, 0.38);
+  --bs-btn-disabled-border-color: rgba(26, 27, 31, 0.12);
+}
+
+.btn-outline-danger {
+  --bs-btn-color: var(--emis-sys-error);
+  --bs-btn-border-color: var(--emis-sys-outline);
+  --bs-btn-hover-color: var(--emis-sys-error);
+  --bs-btn-hover-bg: rgba(186, 26, 26, 0.08);
+  --bs-btn-hover-border-color: var(--emis-sys-outline);
+  --bs-btn-active-color: var(--emis-sys-error);
+  --bs-btn-active-bg: rgba(186, 26, 26, 0.12);
+  --bs-btn-active-border-color: var(--emis-sys-outline);
+}
+
+.btn-outline-success {
+  --bs-btn-color: var(--emis-good);
+  --bs-btn-border-color: var(--emis-sys-outline);
+  --bs-btn-hover-color: var(--emis-good);
+  --bs-btn-hover-bg: rgba(46, 125, 50, 0.08);
+  --bs-btn-hover-border-color: var(--emis-sys-outline);
+  --bs-btn-active-color: var(--emis-good);
+  --bs-btn-active-bg: rgba(46, 125, 50, 0.12);
+  --bs-btn-active-border-color: var(--emis-sys-outline);
+}
+
+/* a caution: a dark amber that reads on white, the same outline and tint as the rest */
+.btn-outline-warning {
+  --bs-btn-color: #9a5b00;
+  --bs-btn-border-color: var(--emis-sys-outline);
+  --bs-btn-hover-color: #9a5b00;
+  --bs-btn-hover-bg: rgba(154, 91, 0, 0.08);
+  --bs-btn-hover-border-color: var(--emis-sys-outline);
+  --bs-btn-active-color: #9a5b00;
+  --bs-btn-active-bg: rgba(154, 91, 0, 0.12);
+  --bs-btn-active-border-color: var(--emis-sys-outline);
+}
+
+.btn-outline-dark {
+  --bs-btn-color: var(--emis-sys-on-surface);
+  --bs-btn-border-color: var(--emis-sys-outline);
+  --bs-btn-hover-color: var(--emis-sys-on-surface);
+  --bs-btn-hover-bg: rgba(26, 27, 31, 0.08);
+  --bs-btn-hover-border-color: var(--emis-sys-outline);
+  --bs-btn-active-color: var(--emis-sys-on-surface);
+  --bs-btn-active-bg: rgba(26, 27, 31, 0.12);
+  --bs-btn-active-border-color: var(--emis-sys-outline);
+}
+
+.btn-link {
+  --bs-btn-color: var(--emis-sys-primary);
+  --bs-btn-hover-color: var(--emis-sys-on-primary-container);
+}
+
+/* --- Cards: the tiles of the client, a white surface with a hairline, no shadow --- */
+.card {
+  --bs-card-bg: var(--emis-tile-surface);
+  --bs-card-border-color: var(--emis-sys-outline-variant);
+  --bs-card-border-radius: var(--emis-sys-corner-small);
+  --bs-card-inner-border-radius: calc(var(--emis-sys-corner-small) - 1px);
+  --bs-card-cap-bg: var(--emis-tile-surface);
+  --bs-card-cap-padding-y: 0.625rem;
+  --bs-card-cap-padding-x: 1rem;
+}
+
+.card.shadow-sm,
+.card.shadow {
+  box-shadow: none !important;
+}
+
+/* The head of a record: the client's inline-head, a 16px title in the dark brand blue */
+.card-header h1,
+.card-header h2,
+.card-header h3,
+.card-header h4,
+.card-header h5,
+.card-header h6,
+.card-header .h1,
+.card-header .h2,
+.card-header .h3,
+.card-header .h4,
+.card-header .h5,
+.card-header .h6 {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--emis-blue-dark);
+}
+
+/* Coloured card heads keep their own text */
+.card-header.text-white h1,
+.card-header.text-white h2,
+.card-header.text-white h3,
+.card-header.text-white h4,
+.card-header.text-white h5,
+.card-header.text-white h6 {
+  color: inherit;
+}
+
+/* --- Tables: the client's data table, 13px, ruled rows, zebra, 30px rows --- */
+.table {
+  --bs-table-bg: transparent;
+  --bs-table-color: var(--emis-sys-on-surface);
+  --bs-table-border-color: var(--emis-sys-outline-variant);
+  --bs-table-striped-bg: var(--emis-light-grey);
+  --bs-table-hover-bg: rgba(0, 92, 187, 0.06);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.table > :not(caption) > * > * {
+  padding: 0.375rem 0.5rem;
+}
+
+.table > thead > tr > th {
+  font-weight: 500;
+  vertical-align: bottom;
+  border-bottom: 2px solid var(--emis-sys-outline);
+}
+
+/* a sortable heading is a heading first, a link second */
+.table > thead > tr > th > a {
+  color: inherit;
+}
+
+.table-light {
+  --bs-table-bg: var(--emis-tile-surface);
+  --bs-table-color: var(--emis-sys-on-surface);
+  --bs-table-border-color: var(--emis-sys-outline-variant);
+}
+
+/* Every list of the client is zebra striped */
+.table > tbody > tr:nth-of-type(even) > * {
+  background-color: var(--emis-light-grey);
+}
+
+/* --- Forms: Material's outlined text field --- */
+.form-control,
+.form-select {
+  border-color: var(--emis-sys-outline);
+  border-radius: var(--emis-sys-corner-extra-small);
+  color: var(--emis-sys-on-surface);
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--emis-sys-primary);
+  box-shadow: inset 0 0 0 1px var(--emis-sys-primary);
+}
+
+.form-control::placeholder {
+  color: var(--emis-sys-on-surface-variant);
+}
+
+.form-label {
+  font-weight: 500;
+  color: var(--emis-sys-on-surface-variant);
+}
+
+.form-check-input:checked {
+  background-color: var(--emis-sys-primary);
+  border-color: var(--emis-sys-primary);
+}
+
+.form-check-input:focus {
+  border-color: var(--emis-sys-primary);
+  box-shadow: 0 0 0 0.2rem var(--bs-focus-ring-color);
+}
+
+.input-group-text {
+  border-color: var(--emis-sys-outline);
+  background-color: var(--emis-sys-surface-container-low);
+}
+
+/* --- Badges: Material's label, medium weight --- */
+.badge {
+  --bs-badge-font-weight: 500;
+  --bs-badge-border-radius: var(--emis-sys-corner-extra-small);
+}
+
+/* --- Alerts, modals, pagination, dropdowns follow the shape scale --- */
+.alert {
+  --bs-alert-border-radius: var(--emis-sys-corner-small);
+}
+
+.alert-danger {
+  --bs-alert-color: var(--emis-sys-on-error-container);
+  --bs-alert-bg: var(--emis-sys-error-container);
+  --bs-alert-border-color: var(--emis-sys-error-container);
+}
+
+.modal {
+  --bs-modal-border-radius: var(--emis-sys-corner-medium);
+  --bs-modal-border-color: var(--emis-sys-outline-variant);
+}
+
+.pagination {
+  --bs-pagination-color: var(--emis-sys-primary);
+  --bs-pagination-border-color: var(--emis-sys-outline-variant);
+  --bs-pagination-hover-color: var(--emis-sys-on-primary-container);
+  --bs-pagination-hover-bg: rgba(0, 92, 187, 0.08);
+  --bs-pagination-active-bg: var(--emis-sys-primary);
+  --bs-pagination-active-border-color: var(--emis-sys-primary);
+  --bs-pagination-focus-box-shadow: 0 0 0 0.2rem var(--bs-focus-ring-color);
+}
+
+.dropdown-menu {
+  --bs-dropdown-border-radius: var(--emis-sys-corner-extra-small);
+  --bs-dropdown-border-color: var(--emis-sys-outline-variant);
+  --bs-dropdown-link-active-bg: var(--emis-sys-secondary-container);
+  --bs-dropdown-link-active-color: var(--emis-sys-on-secondary-container);
+  box-shadow: var(--emis-sys-level2);
+}
+
+.list-group {
+  --bs-list-group-border-color: var(--emis-sys-outline-variant);
+  --bs-list-group-active-bg: var(--emis-sys-primary);
+  --bs-list-group-active-border-color: var(--emis-sys-primary);
+}
+
+.nav-pills {
+  --bs-nav-pills-link-active-bg: var(--emis-sys-primary);
+}
+
+.breadcrumb {
+  --bs-breadcrumb-divider-color: var(--emis-sys-on-surface-variant);
+}
+
+.progress {
+  --bs-progress-bar-bg: var(--emis-sys-primary);
+}

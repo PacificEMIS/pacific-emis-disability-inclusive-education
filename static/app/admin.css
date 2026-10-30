@@ -1,13 +1,18 @@
 /* ==========================================================
    Sidebar-first layout
+
+   The shell of the Pacific EMIS web client (pineapples/PacificEMIS.UI,
+   shell and menu components): a 280px column of the brand blue with the
+   seal and the menu, a plain toolbar over the content, a licence-line
+   footer. Colours come from static/app/theme.css.
    ========================================================== */
 
 /* Sidebar column: fixed width, full height on md+ */
 @media (min-width: 768px) {
   .sidebar-column {
-    width: 220px;
-    min-width: 220px;
-    max-width: 220px;
+    width: 280px;
+    min-width: 280px;
+    max-width: 280px;
     position: sticky !important;
     top: 0;
     height: 100vh;
@@ -15,6 +20,13 @@
     transform: none !important;
     visibility: visible !important;
     z-index: 1040;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+  }
+
+  /* Material's toolbar row on a wide screen */
+  .app-toolbar {
+    min-height: 64px;
   }
 }
 
@@ -29,22 +41,207 @@
   z-index: 1030;
 }
 
-/* Sidebar branding */
+/* The toolbar over the content: the surface colour, a hairline under it, and
+   its controls in the primary colour as Material text buttons are */
+.app-toolbar {
+  --bs-navbar-color: var(--emis-sys-primary);
+  --bs-navbar-hover-color: var(--emis-sys-on-primary-container);
+  --bs-navbar-active-color: var(--emis-sys-on-primary-container);
+  min-height: 56px;
+  background: var(--emis-sys-surface);
+  color: var(--emis-sys-on-surface);
+  border-bottom: 1px solid var(--emis-sys-outline-variant);
+}
+
+.app-toolbar .navbar-toggler {
+  border: 0;
+}
+
+/* The user's button: a Material text button, icon then name, no caret */
+.app-toolbar .app-toolbar-user {
+  --bs-btn-color: var(--emis-sys-primary);
+  --bs-btn-hover-color: var(--emis-sys-primary);
+  --bs-btn-hover-bg: rgba(0, 92, 187, 0.08);
+  --bs-btn-active-color: var(--emis-sys-primary);
+  --bs-btn-active-bg: rgba(0, 92, 187, 0.12);
+  --bs-btn-active-border-color: transparent;
+  --bs-btn-padding-x: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-right: 0.5rem;
+}
+
+.app-toolbar .app-toolbar-user .bi {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.app-toolbar .app-toolbar-user.dropdown-toggle::after {
+  display: none;
+}
+
+/* The menu that opens from it: the client's menu, a white sheet with 48px rows.
+   A navbar that never expands keeps its menus in the flow, which would grow the
+   bar; this one floats over the page like any other dropdown */
+.app-toolbar .navbar-nav .app-user-menu {
+  position: absolute;
+}
+
+.app-user-menu {
+  --bs-dropdown-min-width: 14rem;
+  --bs-dropdown-padding-y: 0.5rem;
+  --bs-dropdown-item-padding-y: 0;
+  --bs-dropdown-item-padding-x: 0.75rem;
+  --bs-dropdown-link-color: var(--emis-sys-on-surface);
+  --bs-dropdown-link-hover-bg: rgba(26, 27, 31, 0.08);
+  --bs-dropdown-header-color: var(--emis-sys-on-surface);
+  --bs-dropdown-header-padding-x: 0.75rem;
+  --bs-dropdown-header-padding-y: 0.5rem;
+  --bs-dropdown-divider-bg: var(--emis-sys-outline-variant);
+}
+
+.app-user-menu .dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 48px;
+  font-weight: 500;
+}
+
+.app-user-menu .dropdown-item .bi {
+  font-size: 1.25rem;
+  line-height: 1;
+  color: var(--emis-sys-on-surface-variant);
+}
+
+.app-user-menu-name {
+  font-weight: 500;
+}
+
+.app-user-menu-email {
+  font-size: 0.75rem;
+  color: var(--emis-sys-on-surface-variant);
+}
+
+/* The bar over a page shown without the menu (sign-in):
+   the brand blue of the client's heading bars */
+.app-brand-bar {
+  background: var(--emis-blue);
+}
+
+.app-brand-bar .navbar-brand {
+  font-size: 18px;
+  font-weight: 500;
+}
+
+/* ==========================================================
+   Not production: a dev or test deployment says so on every page
+   ========================================================== */
+
+/* A steady red strip over the whole page */
+.app-env-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.3rem 1rem;
+  background: #c62828;
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+/* The environment under the seal, where the eye lands on every page */
+.app-env-badge {
+  display: inline-block;
+  margin-top: 0.5rem;
+  padding: 0.15rem 0.75rem;
+  border-radius: var(--emis-sys-corner-full);
+  background: #c62828;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* The licence line under every page */
+.app-footer {
+  font-size: 12px;
+  color: var(--emis-sys-on-surface-variant);
+  text-align: center;
+}
+
+.app-footer hr {
+  border-top-color: var(--emis-sys-outline-variant);
+  opacity: 1;
+}
+
+/* The side menu: a column of the brand blue with one lagoon accent that marks
+   where one is. Its inks are its own: it is the frame around every page */
+.app-sidebar {
+  --nav-bg: var(--emis-blue);
+  --nav-block: var(--emis-blue-dark);
+  --nav-current: var(--emis-blue-light);
+  --nav-ink: #f1f6fc;
+  --nav-muted: #b9cfea;
+  --nav-accent: #7fe3d8;
+  --nav-line: rgba(255, 255, 255, 0.12);
+  --nav-hover: rgba(255, 255, 255, 0.08);
+  --bs-offcanvas-bg: var(--nav-bg);
+  --bs-offcanvas-color: var(--nav-ink);
+  position: relative;
+  isolation: isolate;
+  /* .offcanvas-md clears its background on wide screens; the menu keeps its colour */
+  background: var(--nav-bg) !important;
+  color: var(--nav-ink);
+  font-size: 14px;
+  line-height: 1.3;
+}
+
+/* The lagoon: ripples on still water, the same drawing as the client's menu.
+   Pure decoration, behind everything, never scrolled with the menu */
+.app-sidebar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.16;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='280' height='1100'%3E%3Cg fill='none' stroke='%23fff'%3E%3Cellipse cx='118' cy='261' rx='51' ry='14'/%3E%3Cellipse cx='118' cy='262' rx='68' ry='19'/%3E%3Cellipse cx='117' cy='264' rx='86' ry='24'/%3E%3Cellipse cx='117' cy='266' rx='103' ry='29'/%3E%3Cellipse cx='116' cy='269' rx='122' ry='35'/%3E%3Cellipse cx='115' cy='273' rx='141' ry='41'/%3E%3Cellipse cx='115' cy='277' rx='161' ry='47'/%3E%3Cellipse cx='114' cy='282' rx='182' ry='54'/%3E%3Cellipse cx='112' cy='288' rx='204' ry='62'/%3E%3Cellipse cx='111' cy='295' rx='228' ry='72'/%3E%3Cellipse cx='109' cy='303' rx='254' ry='82'/%3E%3Cellipse cx='107' cy='314' rx='283' ry='94'/%3E%3Cellipse cx='105' cy='327' rx='315' ry='109'/%3E%3Cellipse cx='101' cy='343' rx='351' ry='127'/%3E%3Cellipse cx='97' cy='364' rx='392' ry='150'/%3E%3Cellipse cx='92' cy='392' rx='441' ry='179'/%3E%3Cellipse cx='84' cy='431' rx='502' ry='219'/%3E%3Cellipse cx='72' cy='488' rx='579' ry='278'/%3E%3Cellipse cx='54' cy='579' rx='685' ry='371'/%3E%3Cellipse cx='20' cy='750' rx='849' ry='543'/%3E%3Cellipse cx='239' cy='221' rx='19' ry='3'/%3E%3Cellipse cx='239' cy='221' rx='29' ry='5'/%3E%3Cellipse cx='240' cy='221' rx='40' ry='7'/%3E%3Cellipse cx='240' cy='222' rx='51' ry='9'/%3E%3Cellipse cx='241' cy='222' rx='62' ry='11'/%3E%3Cellipse cx='242' cy='223' rx='73' ry='13'/%3E%3Cellipse cx='243' cy='224' rx='84' ry='15'/%3E%3Cellipse cx='244' cy='225' rx='96' ry='17'/%3E%3Cellipse cx='246' cy='226' rx='107' ry='20'/%3E%3Cellipse cx='248' cy='227' rx='119' ry='22'/%3E%3Cellipse cx='249' cy='228' rx='131' ry='24'/%3E%3Cellipse cx='252' cy='230' rx='144' ry='27'/%3E%3C/g%3E%3C/svg%3E")
+    left top / 280px auto no-repeat;
+  mask-image:
+    linear-gradient(to right, #000 55%, transparent 100%),
+    linear-gradient(to bottom, #000 45%, transparent 100%);
+  mask-composite: intersect;
+}
+
+.app-sidebar .btn-close {
+  filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+/* The seal and the name of the system */
 .sidebar-logo {
-  width: 150px;
-  height: auto;
+  width: 132px;
+  height: 132px;
   object-fit: contain;
 }
 
 .sidebar-app-title {
-  font-size: 1.25rem;
-  letter-spacing: 0.05em;
-  color: #fff;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--nav-ink);
 }
 
 .sidebar-app-subtitle {
-  font-size: 0.8rem;
-  color: #ccc;
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: var(--nav-muted);
 }
 
 /* Login page branding (larger than sidebar) */
@@ -68,25 +265,66 @@
   padding-top: 1rem !important;
 }
 
-/* Keep sidebar tidy */
+/* The tree: every page a row with its icon; the page shown is a solid pill */
+.sidebar .nav {
+  padding: 4px 8px 16px;
+}
+
 .sidebar .nav-link {
-  border-radius: .5rem;
-  margin: .125rem .5rem;
-  color: var(--bs-body-color);
+  gap: 10px;
+  min-height: 36px;
+  padding: 6px 8px 6px 10px;
+  border-radius: 6px;
+  color: var(--nav-ink);
+  font-weight: 500;
 }
-.sidebar .nav-link.active {
+
+.sidebar .nav-link .bi {
+  flex: none;
+  width: 22px;
+  font-size: 20px;
+  line-height: 1;
+  text-align: center;
+  color: var(--nav-muted);
+}
+
+/* the icon's own margin would double the row's gap */
+.sidebar .nav-link .bi.me-2 {
+  margin-right: 0 !important;
+}
+
+.sidebar .nav-link:hover,
+.sidebar .nav-link:focus {
+  color: var(--nav-ink);
+  background-color: var(--nav-hover);
+  text-decoration: none;
+}
+
+.sidebar .nav-link:focus-visible {
+  outline: 2px solid var(--nav-accent);
+  outline-offset: -2px;
+  box-shadow: none;
+}
+
+.sidebar .nav-link.active,
+.sidebar .nav-link.active:hover {
   color: #fff;
-  background-color: #1a5ea8;
+  background-color: var(--nav-current);
 }
-.sidebar .nav-link:hover {
-  color: var(--bs-body-color);
-  background-color: rgba(0,0,0,.08);
+
+.sidebar .nav-link.active .bi {
+  color: var(--nav-ink);
 }
+
+/* a group of pages: the client's flyout title */
 .sidebar-section-label {
   display: block;
-  padding-top: .5rem;
-  padding-bottom: .25rem;
-  opacity: 0.85;
+  padding: 8px 10px 4px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--nav-muted);
   cursor: default;
 }
 

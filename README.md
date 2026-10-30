@@ -65,6 +65,11 @@ uv pip install -r requirements.txt
 Configuration uses the same conventions as Pacific EMIS Core (database URL, authentication, etc.).  
 Environment variables are read from a local `.env` file when present.
 
+`EMIS_CONTEXT` names the deployment, and its parenthetical names the environment:
+`KEMIS` is production, `KEMIS (Test)` or `KEMIS (Dev)` is not. Outside production every
+page carries a red strip at the top and the environment under the seal, and the tab
+title is prefixed with it, so nobody mistakes a test system for the real one.
+
 ---
 
 ## 🧪 Seeding Sample Data
