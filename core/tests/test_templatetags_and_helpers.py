@@ -201,11 +201,21 @@ class TestProjectContextProcessors:
     def test_emis_context_and_logo(self, settings):
         settings.EMIS = {**settings.EMIS, "CONTEXT": "KEMIS (Dev)"}
         ctx = emis_context(None)
-        assert ctx == {"emis_context": "KEMIS (Dev)", "emis_logo": "kemis"}
+        assert ctx == {
+            "emis_context": "KEMIS (Dev)",
+            "emis_logo": "kemis",
+            "emis_name": "KEMIS",
+            "emis_environment": "Dev",
+        }
 
     def test_emis_context_empty(self, settings):
         settings.EMIS = {**settings.EMIS, "CONTEXT": ""}
-        assert emis_context(None) == {"emis_context": None, "emis_logo": "logo"}
+        assert emis_context(None) == {
+            "emis_context": None,
+            "emis_logo": "logo",
+            "emis_name": None,
+            "emis_environment": None,
+        }
 
     def test_app_name(self, settings):
         settings.APP_NAME = "My App"

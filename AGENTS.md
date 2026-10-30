@@ -38,6 +38,22 @@ README.md for how to run it and the conventions for adding tests.
 - Test work is additive. If a test reveals an application bug, report it (or record it
   as a strict `xfail`) rather than silently changing behaviour in the same change.
 
+## CSS and Styles
+
+**IMPORTANT**: Never put CSS in Django templates — no inline `style=""` attributes and no
+`<style>` blocks. All styles go in the appropriate static CSS file:
+- `static/app/theme.css` — the Pacific EMIS look: brand and Material system tokens, Roboto, and Bootstrap variable overrides (type, colour, buttons, cards, tables, forms)
+- `static/app/admin.css` — layout, side menu, toolbar, login page, general UI
+
+Always create CSS classes in these files and reference them in templates.
+
+The theme mirrors the Pacific EMIS web client (`pineapples/PacificEMIS.UI/src/styles.scss`,
+Angular Material, azure palette, Roboto): the `--emis-*` tokens in `theme.css` carry the
+same names and values, and the `--emis-sys-*` tokens are the Material system tokens that
+client resolves to. Keep them in step when the client's change. Theme a Bootstrap
+component through its `--bs-*` variables in `theme.css` rather than restyling markup, so
+templates stay untouched; use the tokens, never a bare hex, for anything new.
+
 ## Project Structure
 
 - Django 5.x project
